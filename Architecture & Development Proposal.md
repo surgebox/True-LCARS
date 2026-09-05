@@ -128,6 +128,7 @@ Might be overkill, but I think plausible and might be worthy of learning how to 
 > While this could easily be just one method, doing multiple 'layers' would presumable be minimal effort. Considering the unpredictable nature of how presentation day will be actually executed. We may as well have every case covered and be prepared to handle all case and choose the quickest, most convenient method that requires minimal user setup.
 
 #### Demo Day's User Experience:
+
 ┌───────────────────────────────┐
 │       PROJECT ENVIRONMENT     │
 │                               │
@@ -139,8 +140,9 @@ Might be overkill, but I think plausible and might be worthy of learning how to 
 │    ↓                          │
 │  Applications                 │
 │    ↓                          │
-│  System interaction            │
+│  System interaction           │
 └───────────────────────────────┘
+
 #### What we deliver
               PROJECT SOURCE
                     │
@@ -210,7 +212,7 @@ No setup or config.
   Hyprland + Quickshell
    │
    ▼
-**Complete experience**
+Complete experience
 
 ---
 
