@@ -119,7 +119,7 @@ Might be overkill, but I think plausible and might be worthy of learning how to 
                       ▼
               YOUR DESKTOP
 
->This basically visualized the idea that when booting up the machine, virtual or otherwise, even your bios or screen pre-login will be custom and LCARS themed. Will require some research, but minimal effort anticipated.
+> This basically visualized the idea that when booting up the machine, virtual or otherwise, even your bios or screen pre-login will be custom and LCARS themed. Will require some research, but minimal effort anticipated.
 
 ---
 
@@ -128,20 +128,7 @@ Might be overkill, but I think plausible and might be worthy of learning how to 
 > While this could easily be just one method, doing multiple 'layers' would presumable be minimal effort. Considering the unpredictable nature of how presentation day will be actually executed. We may as well have every case covered and be prepared to handle all case and choose the quickest, most convenient method that requires minimal user setup.
 
 #### Demo Day's User Experience:
-
-┌───────────────────────────────┐
-│       PROJECT ENVIRONMENT     │
-│                               │
-│  Boot                         │
-│    ↓                          │
-│  Login                        │
-│    ↓                          │
-│  Desktop                      │
-│    ↓                          │
-│  Applications                 │
-│    ↓                          │
-│  System interaction           │
-└───────────────────────────────┘
+ Boot -> Login -> LCARS System - no setup, no downloading or installing.
 
 #### What we deliver
               PROJECT SOURCE
@@ -163,14 +150,11 @@ Best suited if a user wants to install on an *existing* fedora system. Also allo
 
 Our repo will have an install.sh script that will handle anything necessary to be downloaded and install with one command. Leaving only a reboot to apply the changes.
 
-Existing Fedora machine
+    Existing Fedora Machine
         │
         ▼
-   Pull from repo
+    install.sh
         │
-        ▼
-   run install.sh in terminal
-        │(Contains:)
         ├── dependencies
         ├── Hyprland
         ├── Quickshell
@@ -181,10 +165,10 @@ Existing Fedora machine
         └── application integration
         │
         ▼
-      Reboot
+    Reboot
         │
         ▼
-   OUR ENVIRONMENT
+    OUR ENVIRONMENT
 
 
 ### VM Image:
@@ -197,23 +181,24 @@ No installation.
 No modification to their personal computer or files.
 No setup or config.
 
-  Insert USB
-   │
-   ▼
-  Insert BIOS and boot from Fedora-based project image
-   │
-   ▼
-  Boot animation
-   │
-   ▼
-  Custom login
-   │
-   ▼
-  Hyprland + Quickshell
-   │
-   ▼
-Complete experience
 
+
+    Insert USB
+        │
+        ▼
+    Enter BIOS and boot from Fedora-based img
+        │
+        ▼
+     Boot Animation
+        │
+        ▼
+    Custom login
+        │
+        ▼
+    Hyperland + Quickshell
+        │
+        ▼
+     LCARS EXPERIENCE
 ---
 
 # Module Breakdown
