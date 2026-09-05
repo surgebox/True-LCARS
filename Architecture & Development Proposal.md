@@ -241,7 +241,7 @@ The more detailed version will probably live in a separate MD file. This current
 - Research APIs that may be needed for different system stats or other functionality.
 - Research AI / voice related APIs should AI/voice *if* decided to be integrated.
 - Gather up useful resources on visual components, different languages, related projects to learn from, etc
-
+- Rough visual sketches or thought out functional flows on buttons and views. Kinda like planning a website
 
 ## - Quickshell Basics
 - Basic shell
@@ -273,6 +273,7 @@ The more detailed version will probably live in a separate MD file. This current
 - Extensive test usage to tackle logical or graphical bugs
 - Performance (should be silk smooth as possible)
 - Documentation
+- Sounds
 
 >This is just my first rough draft idea of how it can be potentially broken up, just from my current personal understanding. I had a hard time trying to find a way where it can fit into neater buckets that correspond to our in-class roles. That'll be for each person to decide and work out if they'd want to stick so. Even as the 'test engineer' of the group, I think atleast initially, if we go this route, I'd best be fitted tackling the quickshell basics. Although, things such as collecting examples of color values of LCARS' color palette, and shapes, etc, any one can contribute towards. I could also go even deeper in docs on the repo more right before we start working if people find this readable and useful. 
 ---
