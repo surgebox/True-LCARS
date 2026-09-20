@@ -2,7 +2,7 @@
 # shot.sh - grab the layout window to a PNG.
 #
 #   ./dev/shot.sh                          capture shell.qml -> dev/shots/latest.png
-#   ./dev/shot.sh elbow-test.qml out.png   capture something else
+#   ./dev/shot.sh demo/elbow.qml out.png   capture something else
 #   LCARS_SHOT_NEW=1 ./dev/shot.sh         force a throwaway instance
 #
 # If a layout window is already running (the usual case while iterating with

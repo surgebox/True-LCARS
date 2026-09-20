@@ -20,7 +20,7 @@ lint=/usr/lib/qt6/bin/qmllint
 
 cd "$here"
 fail=0
-for f in shell.qml elbow-test.qml tracking-test.qml ui/*.qml theme/*.qml feeds/*.qml; do
+for f in shell.qml tracking-test.qml ui/*.qml theme/*.qml feeds/*.qml demo/*.qml; do
     out=$("$lint" "$f" 2>&1 \
         | grep -E '^(Warning|Error|Critical):' \
         | grep -viE 'Unqualified access' || true)

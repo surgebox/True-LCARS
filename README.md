@@ -1,13 +1,13 @@
 # lcars-dev
 
-Working folder for the LCARS desktop shell. **Layout study 38** - not a shell
+Working folder for the LCARS desktop shell. **Layout study 39** - not a shell
 yet, on purpose.
 
 ```
 ./run.sh                 windowed, hot-reloads on save
 ./run.sh --fullscreen    fullscreen; Escape quits
 ./dev/shot.sh            capture shell.qml        -> dev/shots/latest.png
-./dev/shot.sh elbow-test.qml dev/shots/elbows.png
+./dev/shot.sh demo/elbow.qml dev/shots/elbows.png
 ./dev/check.sh           qmllint, without opening a window
 ```
 
@@ -30,7 +30,8 @@ qmllint can see, so it is worth running before a capture.
 
 ```
 shell.qml              the whole layout, as one plain Window (like objects.qml)
-elbow-test.qml         all four elbow orientations, for eyeballing geometry
+demo/                  one runnable file per component - see demo/README.md
+  rect.qml  label.qml  strip.qml  capsule.qml  textbar.qml  elbow.qml
 tracking-test.qml      live orbital + seismic panels over a real feed (harness)
 theme/
   qmldir               declares the singleton
@@ -62,6 +63,18 @@ dev/
   shots/               captures
 ```
 
+## The demo gallery
+
+`demo/` holds one runnable window per component. A `ui/` file is a definition,
+not a program - it has no size or background, so running it alone gives an empty
+window. A demo is the wrapper that makes a component into something you can look
+at:
+
+    qs -p demo/rect.qml
+
+Change `ui/LcarsRect.qml`, re-run that, and you see that radius and nothing else.
+`demo/README.md` explains the pattern and the two symlinks the folder needs.
+
 ## The sizing model
 
 The layout is authored in **design units for a 2048x1152 canvas**. `LcarsUi.scale`
@@ -91,7 +104,7 @@ corner              topLeft | topRight | bottomLeft | bottomRight
 ```
 
 Used twice, both as the root of a band: `topLeft` for `COMMAND`, `bottomLeft`
-for the `LCARS` corner. `elbow-test.qml` proves all four orientations.
+for the `LCARS` corner. `demo/elbow.qml` proves all four orientations.
 
 ## Region map
 

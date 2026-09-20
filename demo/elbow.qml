@@ -21,7 +21,11 @@ Window {
     color: LcarsUi.black
     title: "LCARS // elbow test"
 
-    Binding { target: LcarsUi; property: "scale"; value: win.height / 1152 }
+    // The shell derives its scale from the SCREEN height. A demo pins it to 1
+    // instead, so a component renders at the same size here as it does in the
+    // shell. Without this, a 560-tall window would scale everything to half
+    // size and you would misjudge every dimension you were studying.
+    Binding { target: LcarsUi; property: "scale"; value: 1 }
 
     property var spots: [
         { c: "topLeft", x: 40, y: 60 },
