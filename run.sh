@@ -3,7 +3,7 @@
 #
 #   ./run.sh              windowed, hot-reloading on every save
 #   ./run.sh --fullscreen fullscreen, so proportions can be judged on the real
-#                         screen. Escape quits either way.
+#                         screen. Ctrl+C quits either way.
 #
 # Quickshell watches every file that belongs to the config directory, so saving
 # any .qml here re-renders the window - no restart needed.
@@ -42,5 +42,5 @@ print(qs[-1]['address'] if qs else '')
     done
 fi
 
-printf 'lcars-dev: running %s - Escape quits\n' "$here/shell.qml"
+printf 'lcars-dev: running %s - Ctrl+C quits\n' "$here/shell.qml"
 wait "$pid"

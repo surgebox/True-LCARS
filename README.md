@@ -5,7 +5,7 @@ yet, on purpose.
 
 ```
 ./run.sh                 windowed, hot-reloads on save
-./run.sh --fullscreen    fullscreen; Escape quits
+./run.sh --fullscreen    fullscreen; Ctrl+C quits
 ./dev/shot.sh            capture shell.qml        -> dev/shots/latest.png
 ./dev/shot.sh demo/elbow.qml dev/shots/elbows.png
 ./dev/check.sh           qmllint, without opening a window
