@@ -5,6 +5,7 @@ yet, on purpose.
 
 ```
 ./run.sh                 windowed, hot-reloads on save
+./run.sh --desktop       managed LCARS desktop with app windows
 ./run.sh --fullscreen    fullscreen; Ctrl+C quits
 ./dev/shot.sh            capture shell.qml        -> dev/shots/latest.png
 ./dev/shot.sh demo/elbow.qml dev/shots/elbows.png
@@ -119,7 +120,10 @@ service; stop another notification daemon before installing it as the shell.
 ## What is here
 
 ```
-shell.qml              the whole layout, as one plain Window (like objects.qml)
+shell.qml              windowed layout preview
+desktop.qml            layer-shell desktop with a transparent app area
+ShellContent.qml       shared LCARS layout and geometry
+scripts/app_layout.py  fits live Hyprland windows into the app area
 demo/                  one runnable file per component - see demo/README.md
   rect.qml  label.qml  strip.qml  capsule.qml  textbar.qml  elbow.qml
 tracking-test.qml      live orbital + seismic panels over a real feed (harness)
@@ -750,19 +754,20 @@ node feeds/orbit/track.mjs             # stream until killed
 
 ## Where this goes next
 
-**Split the chrome into `PanelWindow`s.** One per region - header, top band,
-rail, bottom band - each on the `LayerTop` layer with `exclusiveZone` set, so
-tiled app windows can never slide under the chrome and the layout survives any
-resolution without a single hard-coded coordinate.
+**Refine desktop window handling.** `desktop.qml` uses a transparent app field
+in one top-layer `PanelWindow`; `scripts/app_layout.py` tiles the visible
+workspace's windows in the field. The controller currently makes managed
+windows floating while active and restores their prior layout on exit. Test
+applications with minimum window sizes and multi-monitor setups before relying
+on this as a daily driver.
 
-**Then components.** `shell.qml` is deliberately one file so geometry stays easy
+**Then components.** `ShellContent.qml` is deliberately one file so geometry stays easy
 to iterate on. Once the layout stops moving, the CHROME regions lift straight
 out with their metrics as properties, and the band segments become a
 model-driven `LcarsBand`.
 
-**Then the app area.** Everything inside `APP` is currently a placeholder; the
-real thing is the compositor's own window space, or a `PanelWindow` that
-launches into it.
+**Then the app area.** External windows now render through the transparent
+field in desktop mode; built-in System and Network pages still render in QML.
 
 ## Gotchas this Qt will bite you with
 

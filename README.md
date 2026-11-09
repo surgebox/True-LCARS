@@ -33,11 +33,15 @@ to `~/.config/hypr/hyprland.conf`. If your repo lives
 somewhere other than `~/True-LCARS`, fix the path in that file.
 
 
-You should see the LCARS layout window. `SUPER+Return` opens a terminal.
-For a manual run from the repo root, use `qs -p shell/shell.qml`; `shell/run.sh`
-also starts it. The layout is still a windowed shell study, so use Hyprland's
-`SUPER+F` to fullscreen it. `shell/run.sh --fullscreen` uses an Omarchy-specific
-Hyprland command and is not expected to work on stock Fedora.
+You should see the LCARS desktop. `SUPER+Return` opens a terminal. App windows
+on the current workspace are tiled inside the LCARS application area; the area
+resizes when the header expands or the on-screen keyboard moves. The shell's
+file and network pages cover that area while open. For a windowed layout preview,
+run `qs -p shell/shell.qml` from the repo root. To start the managed desktop
+manually, run `qs -p shell/desktop.qml` or `shell/run.sh --desktop`. Do not run a
+second managed desktop alongside the login session.
+Apps that request their own fullscreen mode bypass the LCARS app area until
+their fullscreen mode is exited.
 
 **Fedora notes:** The installer replaces your Hyprland config. Back up any
 existing `~/.config/hypr/hyprland.conf` first. It installs Fedora's Quickshell
