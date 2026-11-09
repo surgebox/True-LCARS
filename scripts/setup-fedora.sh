@@ -82,15 +82,18 @@ if [[ ! -f "$FONT" ]]; then
 fi
 fc-cache -f >/dev/null 2>&1 || true
 
-echo "==> [5/5] Installing Hyprland config..."
+echo "==> [5/5] Installing Hyprland config and LCARS/Python login session..."
 mkdir -p "$HOME/.config/hypr"
 cp "$REPO_DIR/hypr/hyprland.conf" "$HOME/.config/hypr/hyprland.conf"
 echo "    -> ~/.config/hypr/hyprland.conf"
+sudo install -Dm644 "$REPO_DIR/hypr/lcars-python.desktop" \
+    /usr/share/wayland-sessions/lcars-python.desktop
+echo "    -> /usr/share/wayland-sessions/lcars-python.desktop"
 
 if [[ "$AUTOLOGIN" == "1" ]]; then
-    echo "==> Enabling SDDM autologin for '$USER' (session: hyprland)..."
+    echo "==> Enabling SDDM autologin for '$USER' (session: LCARS/Python)..."
     sudo mkdir -p /etc/sddm.conf.d
-    printf '[Autologin]\nUser=%s\nSession=hyprland\n' "$USER" \
+    printf '[Autologin]\nUser=%s\nSession=lcars-python.desktop\n' "$USER" \
         | sudo tee /etc/sddm.conf.d/autologin.conf >/dev/null
     sudo systemctl enable sddm
     sudo systemctl set-default graphical.target
@@ -98,7 +101,7 @@ fi
 
 echo
 echo "Done. Next steps:"
-echo "  1) Log out of your current desktop and pick 'Hyprland' at the login"
+echo "  1) Log out of your current desktop and pick 'LCARS/Python' at the login"
 echo "     screen (gear menu), or from a TTY run:  Hyprland"
 echo "  2) VirtualBox guest? Uncomment the WLR_RENDERER env lines in"
 echo "     ~/.config/hypr/hyprland.conf (see docs/vm-virtualbox.md)."

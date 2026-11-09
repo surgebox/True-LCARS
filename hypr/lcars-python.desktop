@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=LCARS/Python
+Comment=LCARS shell on Hyprland
+Exec=Hyprland
+TryExec=Hyprland
+Type=Application
+DesktopNames=Hyprland

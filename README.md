@@ -25,10 +25,11 @@ bash scripts/setup-fedora.sh
 # The orbital feed uses satellite.js; install it before starting the shell.
 npm ci --prefix shell/feeds/orbit
 
-# 3. Log out, and at the login screen pick the "Hyprland" session (gear icon).
+# 3. Log out, and at the login screen pick the "LCARS/Python" session (gear icon).
 ```
-The shell starts automatically (`exec-once` in `hypr/hyprland.conf`, which the
-script installs to `~/.config/hypr/hyprland.conf`). If your repo lives
+The LCARS/Python session starts Hyprland, which starts the shell automatically
+through `exec-once` in `hypr/hyprland.conf`. The installer copies that config
+to `~/.config/hypr/hyprland.conf`. If your repo lives
 somewhere other than `~/True-LCARS`, fix the path in that file.
 
 
