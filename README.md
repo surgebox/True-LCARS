@@ -1,4 +1,4 @@
-# Project-Eve
+# True-LCARS
 ---
 A Star Trek LCARS–inspired graphical shell for **Fedora Linux**, built on
 **Hyprland** + **Quickshell** (QML). Every pixel of the interface — bars,
@@ -7,7 +7,7 @@ QML code, so the LCARS style is the *whole* interface, not a theme on top of
 a normal desktop.
 
 ---
-## Getting started (Only neccessary if working on the UI or wanting to see the running version on your own machine)
+## Getting started
 
 **You need: Fedora 44** in VirtualBox or on a real machine. The shell targets
 the 0.2.1 Quickshell that Fedora 44 ships — don't use another Fedora version
@@ -16,20 +16,36 @@ without reading the notes below. Then, from a terminal:
 ```bash
 # 1. Clone into your home directory (the config expects this exact path):
 cd ~
-git clone https://github.com/IsaiahKizo/Project-Eve.git
+git clone --branch henry/lcars-shell https://github.com/surgebox/True-LCARS.git
 
 # 2. Bundle Installer — Hyprland + Quickshell + apps + font (<~10 mins):
-cd Project-Eve
+cd True-LCARS
 bash scripts/setup-fedora.sh
+
+# The orbital feed uses satellite.js; install it before starting the shell.
+npm ci --prefix shell/feeds/orbit
 
 # 3. Log out, and at the login screen pick the "Hyprland" session (gear icon).
 ```
 The shell starts automatically (`exec-once` in `hypr/hyprland.conf`, which the
 script installs to `~/.config/hypr/hyprland.conf`). If your repo lives
-somewhere other than `~/Project-Eve`, fix the path in that file.
+somewhere other than `~/True-LCARS`, fix the path in that file.
 
 
-You should land in the LCARS shell. What you'll see depends on progress done so far.`SUPER+Return` should open a terminal.
+You should see the LCARS layout window. `SUPER+Return` opens a terminal.
+For a manual run from the repo root, use `qs -p shell/shell.qml`; `shell/run.sh`
+also starts it. The layout is still a windowed shell study, so use Hyprland's
+`SUPER+F` to fullscreen it. `shell/run.sh --fullscreen` uses an Omarchy-specific
+Hyprland command and is not expected to work on stock Fedora.
+
+**Fedora notes:** The installer replaces your Hyprland config. Back up any
+existing `~/.config/hypr/hyprland.conf` first. It installs Fedora's Quickshell
+package and version-locks it because the COPR build used by this setup has had
+a Qt private-API mismatch. The LCARS notification panel needs to own the desktop
+notification service; stop another notification daemon if notifications do not
+appear. Network controls need NetworkManager (`nmcli`). Detailed network metrics
+use `omarchy-network-status` and show `--` on stock Fedora; basic network
+connection controls still work. Media previews depend on available codecs.
 
 ---
 
@@ -53,8 +69,7 @@ and the branch will either be merged into the “main” branch or denied.
 
 # Development loop 
 
-Quickshell **hot-reloads QML files as you save them** (`settings.watchFiles: true`
-in `shell.qml`). So:
+Quickshell watches the shell QML files and reloads them as you save. So:
 
 1. Edit any file in `shell/`
 2. Save — the running shell reloads instantly
@@ -87,7 +102,7 @@ No compile step, no restart, no command line needed for iteration.
 ## Repo layout
 (placeholder, update as changes happen)
 ```
-Project-Eve/
+True-LCARS/
 ├── README.md              ← you are here
 ├── docs/
 │   ├── STYLE.md           ← LCARS design guide (colors, fonts, shapes, motion)

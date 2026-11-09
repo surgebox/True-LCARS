@@ -1,0 +1,10 @@
+{
+  "name": "lcars-orbit-feed",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "TLE + SGP4 propagator behind the LCARS orbital tracking panel.",
+  "dependencies": {
+    "satellite.js": "^6.0.2"
+  }
+}

@@ -46,6 +46,16 @@ sudo dnf install -y \
     qt6-qtsvg \
     qt6-qtimageformats \
     qt6-qtmultimedia \
+    python3 \
+    nodejs \
+    npm \
+    NetworkManager \
+    wireplumber \
+    pulseaudio-utils \
+    iproute \
+    iw \
+    poppler-utils \
+    ffmpeg-free \
     fontconfig \
     mesa-vulkan-drivers \
     sddm
