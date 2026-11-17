@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_DESKTOP=LCARS
+export XDG_SESSION_TYPE=wayland
+exec Hyprland --config /usr/local/share/lcars/hyprland.lua

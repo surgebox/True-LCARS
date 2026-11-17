@@ -39,6 +39,7 @@ QtObject {
     readonly property color ember:    "#7a3a00"   // readable on the NET orange
     readonly property color brick:    "#b04a4a"
     readonly property color red:      "#cc3b3b"   // mute / cut-out
+    readonly property color green:    "#55cc88"   // active / enabled
     readonly property color grey:     "#55555f"   // dormant: nothing to show
     readonly property color plum:     "#4e3579"   // the stardate, against the cap
     readonly property color rust:     "#c87a44"

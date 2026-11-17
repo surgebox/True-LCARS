@@ -2,6 +2,7 @@
 # run.sh - start the layout window.
 #
 #   ./run.sh              windowed, hot-reloading on every save
+#   ./run.sh --desktop    managed desktop with live app windows
 #   ./run.sh --fullscreen fullscreen, so proportions can be judged on the real
 #                         screen. Ctrl+C quits either way.
 #
@@ -15,9 +16,11 @@ set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 want_fullscreen=0
+entry="shell.qml"
 [[ "${1:-}" == "--fullscreen" ]] && want_fullscreen=1
+[[ "${1:-}" == "--desktop" ]] && entry="desktop.qml"
 
-qs -p "$here/shell.qml" &
+qs -p "$here/$entry" &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 
@@ -42,5 +45,5 @@ print(qs[-1]['address'] if qs else '')
     done
 fi
 
-printf 'lcars-dev: running %s - Ctrl+C quits\n' "$here/shell.qml"
+printf 'lcars-dev: running %s - Ctrl+C quits\n' "$here/$entry"
 wait "$pid"

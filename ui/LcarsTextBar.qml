@@ -26,6 +26,7 @@ Item {
 
     // ---- public inputs -----------------------------------------------------
     property string text: ""
+    property string clockText: ""
     property color backdrop: LcarsUi.black    // the strip behind everything
     property color accent: LcarsUi.yellow     // caps + the long bar
     property color ink: LcarsUi.honey         // the floating title
@@ -41,6 +42,9 @@ Item {
     // reports the press.
     property bool powerButton: true
     signal powerClicked()
+    property int notificationCount: 0
+    property bool notificationOpen: false
+    signal notificationsClicked()
 
     readonly property real barH: LcarsUi.u(barHeight)
 
@@ -85,7 +89,29 @@ Item {
         height: root.barH
         color: root.accent
         radiusTL: height / 2
-        radiusBL: height / 2
+        radiusBL: root.notificationOpen ? 0 : height / 2
+        Behavior on radiusBL { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
+    }
+
+    LcarsIconButton {
+        objectName: "notificationButton"
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        width: LcarsUi.u(root.capWidth)
+        height: root.barH
+        glyph: "\uf0f3" // bell
+        glyphSize: 22
+        iconColor: LcarsUi.shade
+        onClicked: root.notificationsClicked()
+        Accessible.name: root.notificationCount > 0
+            ? "Notifications, " + root.notificationCount + " new" : "Notifications"
+        Rectangle {
+            visible: root.notificationCount > 0
+            x: parent.width - LcarsUi.u(21)
+            y: LcarsUi.u(9)
+            width: LcarsUi.u(9); height: width; radius: width / 2
+            color: LcarsUi.salmon
+        }
     }
 
     // the floating title - its real ink box is centred on the bar, so the
@@ -109,9 +135,23 @@ Item {
         renderType: Text.NativeRendering
     }
 
+    TextMetrics {
+        id: clockMetrics
+        font.family: LcarsUi.font
+        font.pixelSize: 100
+        font.weight: Font.Light
+        text: "00:00:00"
+    }
+
+    FontMetrics {
+        id: clockFontMetrics
+        font: clockMetrics.font
+    }
+
     // the long square-ended run, filling whatever is left between the title
     // and the right cap
     LcarsRect {
+        id: longRun
         anchors.left: titleLabel.right
         anchors.leftMargin: LcarsUi.u(root.gap)
         anchors.right: rightCap.left
@@ -119,6 +159,25 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         height: root.barH
         color: root.accent
+    }
+
+    Text {
+        id: clockLabel
+        objectName: "headerClock"
+        readonly property real clockRatio: Math.max(0.001, clockMetrics.tightBoundingRect.height / 100)
+        readonly property real clockFontPx: Math.round(root.barH * 0.84 / clockRatio)
+        anchors.right: longRun.right
+        anchors.rightMargin: LcarsUi.u(20)
+        y: root.height / 2 + clockFontPx * clockRatio / 2 - clockFontPx * clockFontMetrics.ascent / 100
+        text: root.clockText
+        color: LcarsUi.black
+        font.family: LcarsUi.font
+        font.pixelSize: clockFontPx
+        font.weight: Font.Light
+        font.features: { "tnum": 1 }
+        renderType: Text.NativeRendering
+        visible: text.length > 0 && longRun.width >= implicitWidth + LcarsUi.u(40)
+        Accessible.name: "Time " + text
     }
 
     // right cap - rounded on its outer (right) face only

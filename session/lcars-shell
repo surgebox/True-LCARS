@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec qs -p /usr/local/share/lcars/desktop.qml

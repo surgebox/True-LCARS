@@ -1,10 +1,45 @@
 # lcars-dev
 
-Working folder for the LCARS desktop shell. **Layout study 39** - not a shell
-yet, on purpose.
+Working folder for the LCARS desktop shell. **Layout study 39** is in active
+development; the Fedora login session starts the current managed desktop mode.
+
+## Fedora 44/45 login session
+
+On Fedora Workstation (RPM edition), run `./install-fedora.sh` as your regular
+user from a complete checkout. The installer uses `sudo` for DNF and system
+files. It installs the runtime packages, downloads the OFL-licensed Antonio
+font, copies the desktop into `/usr/local/share/lcars`, and adds **LCARS** to the
+login screen's Wayland session list. Log out, choose LCARS, and sign in. The
+existing desktop session stays available. `Super+Return` opens Kitty, and
+`Super+Shift+E` ends the LCARS session. The on-screen power button is still a
+placeholder; use the key binding to log out.
+
+Fedora 44/45 do not package Hyprland in their official repositories. If it is
+missing, the installer enables the community `ashbuk/Hyprland-Fedora` COPR and
+installs Hyprland 0.55 or newer. DNF shows the exact download and installed
+sizes before proceeding. Fedora 44 uses Font Awesome 6; the installed copy of
+the QML is adjusted to that font. Its mono text uses Fedora's JetBrains Mono
+font. The source files remain unchanged. The
+installer uses Fedora's official Quickshell package (a 0.2.1-based snapshot on
+both releases), not the newer Omarchy build used during development.
+
+To remove the login entry and copied LCARS files, run `./uninstall-fedora.sh`.
+Use `./uninstall-fedora.sh --remove-packages` to also ask DNF to remove the
+packages that were missing before installation and disable the COPR if this
+installer enabled it. Review DNF's removal list before accepting; shared
+packages might now be used by other software. Notification history in the
+user's home directory is left untouched. Re-running the installer updates the
+copied desktop and preserves its initial package record.
+
+The installer is intended for a fresh Fedora Workstation installation with a
+graphical login screen and an active NetworkManager service. It has not yet
+been run on a Fedora 44 or 45 machine. It does not install a display manager or
+turn a Fedora Server installation into a graphical workstation. The current
+desktop mode supports one LCARS panel and needs testing with multiple monitors.
 
 ```
 ./run.sh                 windowed, hot-reloads on save
+./run.sh --desktop       managed LCARS desktop with app windows
 ./run.sh --fullscreen    fullscreen; Ctrl+C quits
 ./dev/shot.sh            capture shell.qml        -> dev/shots/latest.png
 ./dev/shot.sh demo/elbow.qml dev/shots/elbows.png
@@ -26,10 +61,103 @@ watched happen.
 `dev/check.sh` is the fast loop - this Qt fails the *entire* config on things
 qmllint can see, so it is worth running before a capture.
 
+## System file browser (alternative version)
+
+Click **SYSTEM** to open the embedded file viewer. Selecting a directory adds
+another column, preserving the visible parent chain; deep paths scroll
+horizontally. The columns and preview resize as the chain grows, and the whole
+view slides in from the right. File rows, the filter, and preview actions use
+large touch targets. Selecting a file shows its preview at the right. Navigation stays
+in memory when switching rail buttons. LCARS chrome surrounds readable filenames
+and document text. The column/preview arrangement is inspired by
+[Strata](https://github.com/lgse/strata); this implementation is independent.
+
+The header title displays the current mode in both condensed and expanded
+states; condensed CPU/MEM/NET/DSK pills sit against the right margin. Selecting
+System replaces the side rail with large Back, Forward, Up, Home, Root, Refresh,
+Hidden, and Main controls. Unavailable actions dim, Hidden shows its toggle state,
+and Main returns to the default rail.
+Press COMMAND or LCARS to return to the default mode menu. The browser's path
+field lives in the System toolbar; Ctrl+L focuses it.
+There is no separate file-viewer title bar or navigation toolbar.
+
+The name filter matches names in the displayed columns. The viewer reads files;
+opening in the default application is an
+explicit button, double-click, or Enter on a file. It has no file-editing actions.
+
+| Key | Action |
+| --- | --- |
+| Up / Down | Select and preview an entry |
+| Right / Left | Enter a folder / focus the parent column |
+| Enter | Enter a folder or open a file externally |
+| Ctrl+L | Edit location (absolute paths and `~` supported) |
+| Alt+Up | Parent directory |
+| Alt+Left / Alt+Right | Navigation history |
+| Ctrl+H | Toggle hidden entries |
+| F5 | Refresh directory contents and selected preview |
+
+Previews include images, selectable text/source, rendered Markdown, paginated
+PDFs, and audio/video with explicit playback and seeking. Text is limited to
+64 KiB, PDF previews to 100 MiB, and directory columns to 10,000 entries; the UI
+reports truncation. Unsupported formats retain metadata and an external-open
+button. PDFs require Poppler's `pdftoppm` and `pdfinfo`; video thumbnails and
+media metadata use `ffmpeg`/`ffprobe`. Playback uses Qt Multimedia and supported
+codecs. Python 3 provides the asynchronous read-only service, with previews in
+a temporary cache cleaned on service exit. Refresh is manual (F5).
+
+Run the backend checks with `python3 dev/test-files.py`, and the column keyboard
+checks with `/usr/lib/qt6/bin/qmltestrunner -input dev/tst-file-column.qml`
+(`QT_QPA_PLATFORM=offscreen` works for a headless run).
+
+## Touch keyboard study
+
+Run `qs -p keyboard-preview.qml` to inspect the keyboard by itself. The component
+includes letter and symbol layouts, one-shot Shift, cursor controls, Backspace,
+and Enter. `ui/LcarsKeyboard.qml` accepts a `target` TextInput or TextField and
+a `targetLabel` for the field name shown in its elbow; it emits `enterPressed`
+for the host to handle.
+
+In `shell.qml`, tap the chevron centered on the bottom LCARS bar or the bottom
+KEYBOARD elbow to show every key. Once open, three bars replace the chevron as
+the drag handle. Drag it upward to lift the panel toward your hands, downward to
+peek behind it, and farther down to close it. Tapping either control closes it. The bottom elbow
+and horizontal band stay anchored at the screen edge while the wider keyboard
+tray extends upward from them. At its highest position, the free space below
+the keys is one key row plus its gap. Its two elbows use the band's current color.
+As the tray rises, the expanded top zone folds into its compact layout to keep
+at least 400 design units of application space. Raising it farther first
+shrinks the yellow Hello bar, then slides that bar offscreen. Lowering the tray
+restores the previous top-zone preference.
+Focusing the directory path, file filter, or network password opens the keyboard with that field named
+in the elbow. The file area contracts and the network console moves and scales
+into the space above the keyboard as it moves.
+
+Run its interaction checks with
+`QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input dev/tst-keyboard.qml`.
+The dock gesture checks are in `dev/tst-keyboard-dock.qml` and use the same command.
+
+## Notifications
+
+The black bell in the top-left yellow cap opens the LCARS notification panel.
+The cap straightens into a yellow column that reaches the screen bottom, and
+the menu reveals downward from its lower edge. The title and DND status sit on
+that column. The status is a green ACTIVE or red SILENCED switch with a moving
+thumb. The panel follows the top bar if that bar moves.
+Quickshell's `NotificationServer` receives desktop notifications directly;
+Live and Recent tabs, individual dismiss controls, Clear All, and Do Not
+Disturb work without Omarchy. Recent notifications and the DND setting are
+stored in `$XDG_STATE_HOME/lcars/notifications.json` (or
+`~/.local/state/lcars/notifications.json`). The panel keeps the newest 30
+recent entries. The standalone shell must be the active desktop notification
+service; stop another notification daemon before installing it as the shell.
+
 ## What is here
 
 ```
-shell.qml              the whole layout, as one plain Window (like objects.qml)
+shell.qml              windowed layout preview
+desktop.qml            layer-shell desktop with a transparent app area
+ShellContent.qml       shared LCARS layout and geometry
+scripts/app_layout.py  fits live Hyprland windows into the app area
 demo/                  one runnable file per component - see demo/README.md
   rect.qml  label.qml  strip.qml  capsule.qml  textbar.qml  elbow.qml
 tracking-test.qml      live orbital + seismic panels over a real feed (harness)
@@ -45,6 +173,8 @@ ui/
   LcarsButton.qml      the big button bar (currently unused - the footer is gone)
   LcarsReadout.qml     the amber numeric cascade
   LcarsTextBar.qml     the "HELLO <NAME>" strip (ported from Project-Eve)
+  LcarsKeyboard.qml    touch keyboard with text-field target
+  LcarsKeyboardDock.qml keyboard position controlled by the bottom-band chevron
   LcarsVolumeBar.qml   the draggable vertical level meter (open panel)
   LcarsVolumeBarH.qml  the block-that-opens horizontal meter (collapsed panel)
   LcarsSpeaker.qml     a drawn volume glyph (PARKED - the font glyphs won)
@@ -346,13 +476,14 @@ expand: 0   collapsed (default)
 expand: 1   the full panel
 ```
 
-`expand` is assigned imperatively by the chevron and carries a `Behavior`
+`requestedExpand` is assigned imperatively by the chevron and carries a `Behavior`
 (`600ms`, `InOutQuad`). The panel travels 134 units vertically, so it wants
 longer than a hover transition to read as one deliberate movement. Every moving piece is a `lerp` on it, and because the
 layout metrics themselves descend from `dateElbowH` - which is in turn a lerp -
 animating this single property walks the whole panel open. The top band, the
 rail (`railTop`, `railSpan`) and the app field (`appY`) all follow without
-knowing the feature exists.
+knowing the feature exists. The visible `expand` value follows the requested
+amount until raising the keyboard limits it to preserve the minimum app height.
 
 ### What you get in each state
 
@@ -657,19 +788,20 @@ node feeds/orbit/track.mjs             # stream until killed
 
 ## Where this goes next
 
-**Split the chrome into `PanelWindow`s.** One per region - header, top band,
-rail, bottom band - each on the `LayerTop` layer with `exclusiveZone` set, so
-tiled app windows can never slide under the chrome and the layout survives any
-resolution without a single hard-coded coordinate.
+**Refine desktop window handling.** `desktop.qml` uses a transparent app field
+in one top-layer `PanelWindow`; `scripts/app_layout.py` tiles the visible
+workspace's windows in the field. The controller currently makes managed
+windows floating while active and restores their prior layout on exit. Test
+applications with minimum window sizes and multi-monitor setups before relying
+on this as a daily driver.
 
-**Then components.** `shell.qml` is deliberately one file so geometry stays easy
+**Then components.** `ShellContent.qml` is deliberately one file so geometry stays easy
 to iterate on. Once the layout stops moving, the CHROME regions lift straight
 out with their metrics as properties, and the band segments become a
 model-driven `LcarsBand`.
 
-**Then the app area.** Everything inside `APP` is currently a placeholder; the
-real thing is the compositor's own window space, or a `PanelWindow` that
-launches into it.
+**Then the app area.** External windows now render through the transparent
+field in desktop mode; built-in System and Network pages still render in QML.
 
 ## Gotchas this Qt will bite you with
 
@@ -755,3 +887,92 @@ section above is the record of how it works.
 - The hello bar spans edge to edge with no side margin, unlike everything else
   in the layout. It matches Project-Eve, but if it should respect `m` it is a
   two-line change in the `helloBar` item.
+
+
+## Battery and network console
+
+The battery gauge sits beside volume: a vertical segmented meter when expanded,
+and a compact meter when folded. Percentages appear only in hover/status text. A battery icon identifies both
+layouts. Compact battery and volume bars share a 26-unit height, leaving space for status
+text and a gap above the horizontal LCARS strip. Bars are white, turning
+red at 20% and below. Compact mode has five bars; the expanded icon sits centered
+below the meter, with its percentage in the hover/status text. Status text stays visible at 30% and below, and while plugged in.
+Plugged-in percentage and status text are green and report charging (or full /
+charge held when appropriate). While plugged in, a glowing white fill repeatedly grows from the
+current charge toward full; the percentage continues to report the actual charge.
+Touch or hover for charging state. Missing batteries
+show `--`. `scripts/battery.py` reads laptop battery telemetry from sysfs every
+five seconds, excluding peripheral batteries.
+
+The header **NET** capsule opens the centered network console. The overlay blocks
+input to the underlying shell; tap outside, or press Escape to dismiss it. The
+**NETWORK** rail button opens a network screen that fills the application area
+to the right edge. Its content slides in from the right and slides back out
+when another mode is selected. Its rail segments show live download, upload,
+frequency, link speed, and ping readings, with **MAIN** beneath them to exit
+Network. Tap the top elbow or press
+Escape to return to the main rail. A password field in this screen can raise the
+touch keyboard while the network controls remain above it.
+
+The header pill reports an active Wi-Fi or wired
+connection in green (`CONNECTED`), or shows LCARS red (`INACTIVE`) with no active
+link. The frame uses a yellow top elbow with violet, mauve, sky, rust, and peach
+accents; the Wi-Fi toggle is violet beside the amber Scan button. A small RX/TX
+activity graph shows recent transfer samples. Routine status refreshes update
+silently, without flashing an activity message or disabling controls. The LCARS frame uses compound elbows,
+a segmented spine, and curved row markers. Network rows are 82 design units high
+and support touch scrolling. The console scales down to fit smaller windows.
+
+Select a network, then **CONNECT** (or **DISCONNECT** for the current connection).
+Saved profiles reuse their credentials; new secured networks show a password
+field. **SCAN** refreshes nearby access points; **WI-FI** toggles the radio.
+New enterprise and legacy WEP profiles require setup in the system network
+settings. The menu closes with Escape or by tapping outside it.
+Connection errors remain in the console. No network state changes merely by
+opening the menu. Closing clears password entry while an already submitted
+operation can finish in the background.
+
+The current Wi-Fi network is green, saved profiles are violet, and new/unsaved
+networks are peach; the row markers, text, signal bars, and legend share those
+colors. The menu frame shows interface, download, upload, frequency, link speed,
+ping, gateway, and IP address in place of decorative labels. The live metrics
+stream reuses Omarchy's `network status --verbose` data while the menu or the
+expanded header readout is visible. The readout replaces two numeric columns
+with download, upload, and ping labels and values, and sampling stops when the
+header is compact and the network views are closed;
+transfer rates are calculated from byte-counter changes, so the first sample
+shows `--`. A missing metric also shows `--`.
+
+`scripts/network.py` uses NetworkManager via `nmcli` and JSON over standard input.
+Passwords are passed using a private temporary password file, removed after
+activation; they never appear in process arguments. Existing saved profiles are
+preserved on failure. The service refreshes cached status every ten seconds while
+the menu is open and scans only when requested.
+
+Validation and offline design preview:
+
+```bash
+python3 dev/test-network-battery.py
+qs -p network-test.qml
+qs -p network-preview.qml
+```
+
+The preview uses fictional networks and never starts the network backend.
+`LCARS_CAPTURE=1 qs -p network-preview.qml` saves an offscreen-compatible capture
+to `/tmp/lcars-network-preview.png` and quits.
+
+The approved build before these changes is archived (including `.git` and the
+uncommitted file-browser work) at
+`../backups/lcars-dev-alternative-2026-10-30-before-battery-network.tar.gz`.
+SHA-256: `c84ea0d8960c680098045ddbfd6584ec75fb246ec9ac3d931c7b0b122039d8ad`.
+
+The top yellow bar includes a live 12-hour clock in tall black Antonio Light
+type, matching the stardate weight, immediately left of the power button. It shows
+`HH:MM` when compact and `HH:MM:SS` when expanded, updating once per second.
+
+The mode heading uses the same 62-unit region in both panel states. Expanded, a
+smaller `LCARS ACCESS 441` line sits above the live system hostname; compact,
+the hostname disappears and the heading moves to the right of the CPU/MEM/NET/DSK
+buttons. The four buttons shift left to make room without changing their size.
+Expanded title and hostname align to the left edge of that button group; long
+hostnames elide within the group width.

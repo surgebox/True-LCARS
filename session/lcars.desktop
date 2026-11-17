@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=LCARS
+Comment=LCARS desktop on Hyprland
+Exec=/usr/local/bin/lcars-session
+Type=Application
+DesktopNames=Hyprland;LCARS
