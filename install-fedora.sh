@@ -79,6 +79,7 @@ sudo dnf install "${packages[@]}"
 
 command -v qs >/dev/null || die 'Quickshell was installed but qs is unavailable.'
 command -v Hyprland >/dev/null || die 'Hyprland was installed but its executable is unavailable.'
+command -v start-hyprland >/dev/null || die 'Hyprland was installed but start-hyprland is unavailable.'
 if ! systemctl is-active --quiet NetworkManager; then
     note 'NetworkManager is installed but not active; Wi-Fi controls need that service running.'
 fi

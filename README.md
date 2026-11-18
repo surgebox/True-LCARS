@@ -14,6 +14,11 @@ existing desktop session stays available. `Super+Return` opens Kitty, and
 `Super+Shift+E` ends the LCARS session. The on-screen power button is still a
 placeholder; use the key binding to log out.
 
+The session launches through `start-hyprland` with its own Lua config, as
+required by current Hyprland. Hyprland may warn that `hyprland-guiutils` is
+missing when its optional dialogs are unavailable; LCARS does not use those
+dialogs.
+
 Fedora 44/45 do not package Hyprland in their official repositories. If it is
 missing, the installer enables the community `ashbuk/Hyprland-Fedora` COPR and
 installs Hyprland 0.55 or newer. DNF shows the exact download and installed
