@@ -3,6 +3,7 @@
 import importlib.util
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -17,6 +18,7 @@ def module(name):
 
 network = module('network')
 battery = module('battery')
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 metrics = module('network-metrics')
 
 
@@ -144,23 +146,25 @@ class MetricsTests(unittest.TestCase):
             self.assertIsNone(result['uploadBps'])
 
     def test_helper_unavailable_degrades_to_unknown(self):
-        with patch.object(metrics.subprocess, 'run', side_effect=FileNotFoundError):
+        with patch.object(metrics, 'nm', side_effect=FileNotFoundError):
             self.assertEqual(metrics.read_details(), {})
 
-    def test_fedora_fallback_reads_connected_interface_counters(self):
-        from pathlib import Path
-        from tempfile import TemporaryDirectory
-        from subprocess import CompletedProcess
-        with TemporaryDirectory() as temp:
+    def test_fedora_wifi_metrics(self):
+        with tempfile.TemporaryDirectory() as temp:
             counters = Path(temp) / 'wlan0' / 'statistics'
             counters.mkdir(parents=True)
             (counters / 'rx_bytes').write_text('1200\n')
             (counters / 'tx_bytes').write_text('3400\n')
-            status = CompletedProcess([], 0, 'wlan0:wifi:connected\neth0:ethernet:disconnected\n', '')
-            with patch.object(metrics.subprocess, 'run', side_effect=[FileNotFoundError(), status]), \
-                    patch.object(metrics, 'Path', return_value=Path(temp)):
+            status = 'wlan0:wifi:connected\neth0:ethernet:disconnected'
+            config = 'IP4.ADDRESS[1]:192.168.1.2/24\nIP4.GATEWAY:192.168.1.1'
+            with patch.object(metrics, 'nm', side_effect=[status, config]), \
+                    patch.object(metrics, 'Path', return_value=Path(temp)), \
+                    patch.object(metrics, 'probe', side_effect=[
+                        'icmp_seq=1 ttl=64 time=2.05 ms', '\tfreq: 5180\n\ttx bitrate: 540.0 MBit/s']):
                 self.assertEqual(metrics.read_details(), {
-                    'iface': 'wlan0', 'rx_bytes': '1200', 'tx_bytes': '3400'})
+                    'iface': 'wlan0', 'rx_bytes': '1200', 'tx_bytes': '3400',
+                    'ip': '192.168.1.2', 'prefix': '24', 'gateway': '192.168.1.1',
+                    'gateway_ping_ms': '2.05', 'freq': '5180', 'bitrate': '540.0 MBit/s'})
 
 
 if __name__ == '__main__':

@@ -1,40 +1,78 @@
 #!/usr/bin/env python3
 """Stream connection details for the LCARS network panel.
 
-Uses Omarchy's richer probe when available and NetworkManager/sysfs elsewhere.
-Runs only while the menu is open. Byte-counter deltas report transfer rates.
+Uses NetworkManager for connection state and Linux for link statistics.
+Byte-counter deltas report transfer rates.
 """
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import time
+
+from network import NetworkError, fields, nm
+
+
+def probe(*args):
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=2,
+                                env={**os.environ, 'LC_ALL': 'C'})
+        if result.returncode == 0:
+            return result.stdout
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return ''
 
 
 def read_details():
     try:
-        result = subprocess.run(['omarchy-network-status', '--verbose'],
-                                capture_output=True, text=True, timeout=5, check=False)
-        if result.returncode == 0:
-            return dict(line.split('\t', 1) for line in result.stdout.splitlines() if '\t' in line)
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+        status = nm('-t', '-f', 'DEVICE,TYPE,STATE', 'device', 'status', timeout=2)
+        device = next(((iface, kind) for iface, kind, state in map(fields, status.splitlines())
+                       if kind in ('wifi', 'ethernet') and state.startswith('connected')), None)
+    except (OSError, NetworkError, subprocess.TimeoutExpired):
+        return {}
+    if device is None:
+        return {}
+    iface, kind = device
+    base = Path('/sys/class/net') / iface
+    details = {'iface': iface}
+    for counter in ('rx_bytes', 'tx_bytes'):
+        try:
+            details[counter] = (base / 'statistics' / counter).read_text().strip()
+        except OSError:
+            continue
+
     try:
-        status = subprocess.run(['nmcli', '-t', '-f', 'DEVICE,TYPE,STATE', 'device', 'status'],
-                                capture_output=True, text=True, timeout=5, check=False)
-        if status.returncode:
-            return {}
-        for line in status.stdout.splitlines():
-            fields = line.split(':', 2)
-            if len(fields) != 3 or fields[1] not in ('wifi', 'ethernet') or not fields[2].startswith('connected'):
-                continue
-            iface = fields[0]
-            base = Path('/sys/class/net') / iface / 'statistics'
-            return {'iface': iface,
-                    'rx_bytes': (base / 'rx_bytes').read_text().strip(),
-                    'tx_bytes': (base / 'tx_bytes').read_text().strip()}
-    except (OSError, subprocess.TimeoutExpired):
+        config = nm('-t', '-f', 'IP4.ADDRESS,IP4.GATEWAY', 'device', 'show', iface, timeout=2)
+        values = dict(map(fields, config.splitlines()))
+        ip, _, prefix = values.get('IP4.ADDRESS[1]', '').partition('/')
+        gateway = values.get('IP4.GATEWAY', '')
+        details.update(ip=ip, prefix=prefix, gateway=gateway)
+        if gateway and gateway != '--':
+            ping = probe('ping', '-n', '-c', '1', '-W', '1', '-I', iface, gateway)
+            latency = re.search(r'\btime[=<]([\d.]+) ms', ping)
+            if latency:
+                details['gateway_ping_ms'] = latency.group(1)
+    except (OSError, NetworkError, subprocess.TimeoutExpired):
         pass
-    return {}
+
+    if kind == 'wifi':
+        link = probe('iw', 'dev', iface, 'link')
+        frequency = re.search(r'^\s*freq: (\d+)', link, re.MULTILINE)
+        bitrate = re.search(r'^\s*tx bitrate: ([\d.]+ MBit/s)', link, re.MULTILINE)
+        if frequency:
+            details['freq'] = frequency.group(1)
+        if bitrate:
+            details['bitrate'] = bitrate.group(1)
+    else:
+        try:
+            speed = int((base / 'speed').read_text())
+            if speed > 0:
+                details['speed'] = speed
+        except (OSError, ValueError):
+            pass
+    return details
 
 
 def sample(details, previous=None, now=None):

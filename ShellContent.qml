@@ -40,6 +40,7 @@ Item {
     readonly property real appAreaWidth: appArea.width
     readonly property real appAreaHeight: appArea.height
     readonly property bool internalPage: activeFn === "system" || activeFn === "network"
+    readonly property bool powerMenuOpen: powerMenu.visible
 
     readonly property real dh: 1152 // design canvas height
 
@@ -364,10 +365,11 @@ Item {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (keyboardDock.open) keyboardDock.close()
+            if (powerMenu.open) powerMenu.close()
+            else if (keyboardDock.open) keyboardDock.close()
             else if (networkMenu.open) networkMenu.close()
             else if (notificationMenu.open) notificationMenu.close()
-            else Qt.quit()
+            else if (!win.desktopMode) Qt.quit()
         }
     }
 
@@ -582,10 +584,17 @@ Item {
             accent: LcarsUi.yellow
             ink: LcarsUi.honey
 
-            // Hook for the power menu: shutdown / reboot / logout. Deliberately
-            // just a log for now - nothing here should be able to take the
-            // session down until the menu behind it exists.
-            onPowerClicked: console.log("LCARS power button pressed")
+            powerButton: win.desktopMode
+            onPowerClicked: {
+                if (powerMenu.open) {
+                    powerMenu.close()
+                } else {
+                    networkMenu.close()
+                    notificationMenu.close()
+                    keyboardDock.close()
+                    powerMenu.show()
+                }
+            }
         }
     }
 
@@ -642,7 +651,7 @@ Item {
         {fn: "upload", color: LcarsUi.violet, text: "UPLOAD\n" + networkScreen.rate(networkScreen.liveInfo.uploadBps), selected: networkScreen.metricFocus === "upload"},
         {fn: "frequency", color: LcarsUi.rust, text: "FREQUENCY\n" + networkScreen.metric(networkScreen.liveInfo.freq, " MHz"), selected: networkScreen.metricFocus === "frequency"},
         {fn: "speed", color: LcarsUi.peach, text: "LINK SPEED\n" + (networkScreen.liveInfo.bitrate || networkScreen.metric(networkScreen.liveInfo.speed, " Mbit/s")), selected: networkScreen.metricFocus === "speed"},
-        {fn: "ping", color: LcarsUi.mauve, text: "PING\n" + networkScreen.metric(networkScreen.liveInfo.internet_ping_ms, " ms"), selected: networkScreen.metricFocus === "ping"},
+        {fn: "ping", color: LcarsUi.mauve, text: "GATEWAY PING\n" + networkScreen.metric(networkScreen.liveInfo.gateway_ping_ms, " ms"), selected: networkScreen.metricFocus === "ping"},
         {fn: "main", color: LcarsUi.violet, text: "MAIN", size: 34, pad: 22}
     ].map(block => Object.assign({w: 1, size: 24, align: "right", pad: 18}, block))
 
@@ -1385,6 +1394,14 @@ Item {
         id: notificationMenu
         anchors.fill: parent
         originY: helloBar.y + helloBar.height
+        backendEnabled: win.desktopMode
+        bannerAllowed: !powerMenu.visible && !networkMenu.open
+    }
+
+    LcarsPowerMenu {
+        id: powerMenu
+        anchors.fill: parent
+        originY: helloBar.y + helloBar.height
     }
 
     LcarsKeyboardDock {
@@ -1418,7 +1435,7 @@ Item {
         objectName: "keyboardChevron"
         readonly property bool trayVisible:
             keyboardDock.coveredTop < bottomBand.y - LcarsUi.u(40)
-        visible: keyboardDock.open || (!networkMenu.open && !notificationMenu.open)
+        visible: keyboardDock.open || (!networkMenu.open && !notificationMenu.open && !powerMenu.visible)
         x: LcarsUi.u(win.dw / 2 - win.chevW / 2)
         y: Math.min(bottomBand.y + bottomBand.height - LcarsUi.u(win.bottomThick / 2),
             keyboardDock.coveredTop + LcarsUi.u(20)) - height / 2

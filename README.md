@@ -11,8 +11,8 @@ files. It installs the runtime packages, downloads the OFL-licensed Antonio
 font, copies the desktop into `/usr/local/share/lcars`, and adds **LCARS** to the
 login screen's Wayland session list. Log out, choose LCARS, and sign in. The
 existing desktop session stays available. `Super+Return` opens Kitty, and
-`Super+Shift+E` ends the LCARS session. The on-screen power button is still a
-placeholder; use the key binding to log out.
+`Super+Shift+E` ends the LCARS session. The power button in the top-right cap
+opens **Power Off**, **Restart**, **Sleep**, and **Log Out**.
 
 The LCARS session uses `assets/lcars-wallpaper.png` as its single default
 wallpaper. The installer copies it into `/usr/local/share/lcars/assets/`; run
@@ -159,13 +159,15 @@ The cap straightens into a yellow column that reaches the screen bottom, and
 the menu reveals downward from its lower edge. The title and DND status sit on
 that column. The status is a green ACTIVE or red SILENCED switch with a moving
 thumb. The panel follows the top bar if that bar moves.
-Quickshell's `NotificationServer` receives desktop notifications directly;
-Live and Recent tabs, individual dismiss controls, Clear All, and Do Not
-Disturb work without Omarchy. Recent notifications and the DND setting are
+LCARS receives native desktop notifications through Quickshell and sandboxed
+app notifications through Fedora's GTK portal. A new notification briefly
+shows a banner and lights the bell while it is live. Open the bell to switch
+between Live and Recent, dismiss messages, clear history, or turn on Do Not
+Disturb. Recent notifications and the DND setting are
 stored in `$XDG_STATE_HOME/lcars/notifications.json` (or
 `~/.local/state/lcars/notifications.json`). The panel keeps the newest 30
-recent entries. The standalone shell must be the active desktop notification
-service; stop another notification daemon before installing it as the shell.
+recent entries. To send a test notification in the running LCARS session, use
+`notify-send "LCARS test" "Fedora notifications are connected"`.
 
 ## What is here
 
@@ -643,10 +645,9 @@ The whole cap is the hit area rather than just the glyph - an 80x56 pad with a
 24px icon in it is a much easier target than the icon alone. The button draws no
 background of its own, so the cap shows through untouched.
 
-**Nothing is wired to it yet.** `shell.qml` logs the press and nothing more,
-deliberately: shutdown, reboot and logout are the next session's work, and none
-of them should be reachable from a button until the menu behind it exists. The
-hook is `onPowerClicked`.
+The power menu uses systemd-logind for shutdown, reboot, suspend, and ending
+the current LCARS login session. Power Off, Restart, and Log Out ask for
+confirmation. Press Escape or click outside the menu to dismiss it.
 
 The name comes from the same lookup chain: `git user.name`, then the passwd
 GECOS field, then the raw username - so a `firstlast` username still renders as
@@ -953,10 +954,10 @@ operation can finish in the background.
 The current Wi-Fi network is green, saved profiles are violet, and new/unsaved
 networks are peach; the row markers, text, signal bars, and legend share those
 colors. The menu frame shows interface, download, upload, frequency, link speed,
-ping, gateway, and IP address in place of decorative labels. The live metrics
-stream reuses Omarchy's `network status --verbose` data while the menu or the
-expanded header readout is visible. The readout replaces two numeric columns
-with download, upload, and ping labels and values, and sampling stops when the
+gateway latency, gateway, and IPv4 address in place of decorative labels. The
+live metrics stream uses NetworkManager and Linux link statistics while the
+menu or the expanded header readout is visible. The readout replaces two numeric
+columns with download, upload, and gateway latency, and sampling stops when the
 header is compact and the network views are closed;
 transfer rates are calculated from byte-counter changes, so the first sample
 shows `--`. A missing metric also shows `--`.

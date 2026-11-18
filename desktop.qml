@@ -26,8 +26,8 @@ ShellRoot {
         anchors { top: true; right: true; bottom: true; left: true }
         color: "transparent"
         aboveWindows: true
-        WlrLayershell.keyboardFocus: content.internalPage
-            ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: content.powerMenuOpen ? WlrKeyboardFocus.Exclusive
+            : content.internalPage ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         exclusiveZone: 0
         surfaceFormat.opaque: false
         mask: Region {
@@ -36,8 +36,8 @@ ShellRoot {
             Region {
                 x: content.appAreaX
                 y: content.appAreaY
-                width: content.internalPage ? 0 : content.appAreaWidth
-                height: content.internalPage ? 0 : content.appAreaHeight
+                width: content.internalPage || content.powerMenuOpen ? 0 : content.appAreaWidth
+                height: content.internalPage || content.powerMenuOpen ? 0 : content.appAreaHeight
                 intersection: Intersection.Subtract
             }
         }

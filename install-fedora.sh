@@ -6,6 +6,7 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 app_dir=/usr/local/share/lcars
 font_dir=/usr/local/share/fonts/lcars
 session_file=/usr/share/wayland-sessions/lcars.desktop
+portal_file=/usr/share/xdg-desktop-portal/lcars-portals.conf
 launcher=/usr/local/bin/lcars-session
 shell_launcher=/usr/local/bin/lcars-shell
 manifest=/var/lib/lcars/install-info
@@ -29,7 +30,8 @@ command -v sudo >/dev/null || die 'sudo is required.'
 
 packages=(quickshell qt6-qtdeclarative qt6-qtmultimedia NetworkManager
     pipewire-utils pulseaudio-utils poppler-utils ffmpeg-free python3 xdg-utils
-    kitty fontconfig curl jetbrains-mono-fonts)
+    kitty fontconfig curl jetbrains-mono-fonts dbus-tools xdg-desktop-portal-gtk
+    mate-polkit iw iputils)
 if [[ $VERSION_ID == 45 ]]; then
     packages+=(fontawesome-7-free-fonts)
 else
@@ -127,6 +129,7 @@ sudo install -m 755 "$here/session/lcars-session" "$launcher"
 sudo install -m 755 "$here/session/lcars-shell" "$shell_launcher"
 sudo install -d -m 755 /usr/share/wayland-sessions /var/lib/lcars
 sudo install -m 644 "$here/session/lcars.desktop" "$session_file"
+sudo install -m 644 "$here/session/lcars-portals.conf" "$portal_file"
 all_new_packages="${previous_packages} ${new_packages[*]}"
 read -r -a package_words <<< "$all_new_packages"
 all_new_packages=$(printf '%s\n' "${package_words[@]}" | awk 'NF && !seen[$0]++' | paste -sd ' ' -)

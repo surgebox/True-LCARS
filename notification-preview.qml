@@ -25,7 +25,7 @@ Window {
         open: true
         showingRecent: true
         items: [
-            {app: "OMARCHY", summary: "System update available", body: "12 packages are ready to install.", timestamp: Date.now(), urgency: 1, active: true},
+            {app: "FEDORA", summary: "System update available", body: "12 packages are ready to install.", timestamp: Date.now(), urgency: 1, active: true},
             {app: "MESSAGES", summary: "Incoming transmission", body: "Meet us at the starbase in twenty minutes.", timestamp: Date.now() - 360000, urgency: 1, active: false},
             {app: "SYSTEM", summary: "Battery low", body: "Connect power to continue working.", timestamp: Date.now() - 720000, urgency: 2, active: false},
             {app: "CALENDAR", summary: "Mission briefing", body: "Conference room, deck 4.", timestamp: Date.now() - 950000, urgency: 1, active: false},

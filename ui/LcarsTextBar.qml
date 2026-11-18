@@ -37,9 +37,7 @@ Item {
     property real letterSpacing: 4            // tracking, in design units
     property real textFill: 0.92              // ink height / barHeight
 
-    // The right cap doubles as the power button. Nothing is wired to it yet -
-    // shutdown / reboot / logout is the next session's work - so it just
-    // reports the press.
+    // The right cap doubles as the power button in the desktop.
     property bool powerButton: true
     signal powerClicked()
     property int notificationCount: 0
@@ -197,6 +195,8 @@ Item {
     // draws no background of its own, so the cap shows through.
     LcarsIconButton {
         visible: root.powerButton
+        objectName: "powerButton"
+        Accessible.name: "Power options"
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         width: LcarsUi.u(root.capWidth)

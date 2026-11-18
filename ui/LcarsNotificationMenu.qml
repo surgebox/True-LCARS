@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls.Basic
+import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import "../theme"
@@ -12,17 +13,21 @@ FocusScope {
     property real originY: LcarsUi.u(66)
     property real reveal: 0
     property bool backendEnabled: true
+    property bool bannerAllowed: true
     property var items: []
     property bool dnd: false
     property bool showingRecent: false
     readonly property var displayedItems: items.filter(item => item.active !== showingRecent)
-    readonly property int notificationCount: items.length
+    readonly property int notificationCount: items.filter(item => item.active).length
+    property string bannerKey: ""
+    readonly property var bannerItem: bannerKey ? items.find(item => item.key === bannerKey && item.active) : null
+    readonly property bool showBanner: bannerAllowed && !dnd && !open && !!bannerItem
     readonly property string script: Qt.resolvedUrl("../scripts/notifications.py").toString().replace(/^file:\/\//, "")
     property var liveRefs: ({})
     property var deadlines: ({})
     property int nextKey: 0
     property bool historyLoaded: false
-    visible: open || reveal > 0
+    visible: open || reveal > 0 || showBanner
     enabled: open
     z: 1900
     onOpenChanged: reveal = open ? 1 : 0
@@ -31,6 +36,7 @@ FocusScope {
     }
 
     function show() {
+        bannerKey = ""
         open = true
         showingRecent = !items.some(item => item.active)
         forceActiveFocus()
@@ -99,6 +105,10 @@ FocusScope {
         notification.bodyChanged.connect(update)
         notification.appNameChanged.connect(update)
         items = [row].concat(items)
+        if (!open && !notification.lastGeneration) {
+            bannerKey = key
+            bannerTimer.restart()
+        }
         if (open && showingRecent) showingRecent = false
     }
     function dismiss(key) {
@@ -128,12 +138,20 @@ FocusScope {
         }
     }
 
-    NotificationServer {
-        keepOnReload: true
-        persistenceSupported: true
-        actionsSupported: true
-        bodyMarkupSupported: false
-        onNotification: notification => root.receive(notification)
+    LazyLoader {
+        active: root.backendEnabled
+        NotificationServer {
+            keepOnReload: true
+            actionsSupported: true
+            bodyMarkupSupported: false
+            onNotification: notification => root.receive(notification)
+        }
+    }
+
+    Timer {
+        id: bannerTimer
+        interval: 6000
+        onTriggered: root.bannerKey = ""
     }
 
     Process {
@@ -177,7 +195,46 @@ FocusScope {
         }
     }
 
-    MouseArea { anchors.fill: parent; onClicked: root.close() }
+    MouseArea { anchors.fill: parent; visible: root.open; onClicked: root.close() }
+
+    Rectangle {
+        id: banner
+        visible: root.showBanner
+        anchors.right: parent.right
+        anchors.rightMargin: LcarsUi.u(10)
+        y: root.originY + LcarsUi.u(10)
+        width: Math.min(root.width - LcarsUi.u(20), LcarsUi.u(420))
+        height: message.implicitHeight + LcarsUi.u(28)
+        color: LcarsUi.shade
+        border.color: LcarsUi.yellow
+        border.width: Math.max(1, LcarsUi.u(2))
+        radius: LcarsUi.u(16)
+
+        Column {
+            id: message
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: LcarsUi.u(14) }
+            spacing: LcarsUi.u(4)
+
+            LcarsLabel {
+                width: parent.width
+                text: root.bannerItem ? root.bannerItem.app : ""
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                size: 18
+                color: LcarsUi.honey
+            }
+
+            LcarsLabel {
+                width: parent.width
+                text: root.bannerItem ? root.bannerItem.summary : ""
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                caps: false
+                size: 26
+                color: LcarsUi.ink
+            }
+        }
+    }
 
     Item {
         id: revealMask

@@ -57,7 +57,7 @@ FocusScope {
         case "upload": return "UPLOAD / " + rate(liveInfo.uploadBps)
         case "frequency": return "FREQUENCY / " + metric(liveInfo.freq, " MHz")
         case "speed": return "LINK SPEED / " + (liveInfo.bitrate || metric(liveInfo.speed, " Mbit/s"))
-        case "ping": return "PING / " + metric(liveInfo.internet_ping_ms, " ms")
+        case "ping": return "GATEWAY PING / " + metric(liveInfo.gateway_ping_ms, " ms")
         default: return ""
         }
     }
@@ -268,14 +268,14 @@ FocusScope {
             visible: !root.embedded
             x: LcarsUi.u(12); y: LcarsUi.u(646)
             width: LcarsUi.u(98); height: LcarsUi.u(26)
-            text: "PING"; size: 18; color: LcarsUi.shade
+            text: "GATEWAY PING"; size: 18; color: LcarsUi.shade
             horizontalAlignment: Text.AlignRight
         }
         LcarsLabel {
             visible: !root.embedded
             x: LcarsUi.u(12); y: LcarsUi.u(682)
             width: LcarsUi.u(98); height: LcarsUi.u(36)
-            text: root.metric(root.liveInfo.internet_ping_ms, " ms")
+            text: root.metric(root.liveInfo.gateway_ping_ms, " ms")
             size: 26; color: LcarsUi.shade; fit: true; caps: false
             horizontalAlignment: Text.AlignRight
         }

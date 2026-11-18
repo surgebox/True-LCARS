@@ -49,6 +49,7 @@ if ((remove_packages)); then
 fi
 
 sudo rm -f -- /usr/share/wayland-sessions/lcars.desktop \
+    /usr/share/xdg-desktop-portal/lcars-portals.conf \
     /usr/local/bin/lcars-session /usr/local/bin/lcars-shell
 sudo rm -rf -- "$app_dir" /usr/local/share/fonts/lcars /var/lib/lcars
 echo 'LCARS session removed. Existing Fedora sessions and user files were left in place.'

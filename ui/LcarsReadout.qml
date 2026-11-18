@@ -73,9 +73,9 @@ Item {
         const details = networkMetrics || {}
         if (!details.iface) return "--"
         if (row === 2) {
-            if (details.internet_ping_ms === null || details.internet_ping_ms === undefined
-                || details.internet_ping_ms === "") return "--"
-            const ping = Number(details.internet_ping_ms)
+            if (details.gateway_ping_ms === null || details.gateway_ping_ms === undefined
+                || details.gateway_ping_ms === "") return "--"
+            const ping = Number(details.gateway_ping_ms)
             return Number.isFinite(ping) ? Math.round(ping) + " MS" : "--"
         }
         const value = Number(row === 0 ? details.downloadBps : details.uploadBps)
