@@ -1,6 +1,7 @@
 -- Minimal, separate Hyprland configuration for the LCARS login session.
 -- Uses Hyprland 0.55+ Lua configuration as packaged by the Fedora COPR.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+hl.config({ misc = { disable_hyprland_logo = true, disable_splash_rendering = true } })
 hl.bind("SUPER + Return", hl.dsp.exec_cmd("kitty"))
 hl.bind("SUPER + SHIFT + E", hl.dsp.exit())
 

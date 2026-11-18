@@ -22,7 +22,8 @@ source /etc/os-release
 [[ ${VERSION_ID:-} == 44 || ${VERSION_ID:-} == 45 ]] || die 'Supported Fedora releases: 44 and 45.'
 command -v dnf >/dev/null || die 'DNF is required (Fedora Workstation/RPM edition).'
 command -v sudo >/dev/null || die 'sudo is required.'
-[[ -f $here/desktop.qml && -f $here/ShellContent.qml && -f $here/scripts/app_layout.py ]] ||
+[[ -f $here/desktop.qml && -f $here/ShellContent.qml &&
+   -f $here/assets/lcars-wallpaper.png && -f $here/scripts/app_layout.py ]] ||
     die 'Desktop files are missing. Use a complete checkout of the current project.'
 
 packages=(quickshell qt6-qtdeclarative qt6-qtmultimedia NetworkManager
@@ -102,8 +103,9 @@ curl -fL --retry 3 -o "$tmp_dir/OFL.txt" "$font_url/OFL.txt"
 fc-scan --format '%{family}\n' "$tmp_dir/Antonio.ttf" | grep -qx 'Antonio' ||
     die 'The Antonio download is not a valid Antonio font.'
 
-sudo install -d -m 755 "$app_dir" "$app_dir/ui" "$app_dir/theme" "$app_dir/scripts" "$font_dir"
+sudo install -d -m 755 "$app_dir" "$app_dir/ui" "$app_dir/theme" "$app_dir/scripts" "$app_dir/assets" "$font_dir"
 sudo install -m 644 "$here/desktop.qml" "$here/ShellContent.qml" "$app_dir/"
+sudo install -m 644 "$here/assets/lcars-wallpaper.png" "$app_dir/assets/lcars-wallpaper.png"
 sudo install -m 644 "$here"/ui/*.qml "$app_dir/ui/"
 sudo install -m 644 "$here"/theme/*.qml "$here"/theme/qmldir "$app_dir/theme/"
 sudo install -m 644 "$here"/scripts/*.py "$here"/scripts/*.sh "$app_dir/scripts/"

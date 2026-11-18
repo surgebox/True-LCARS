@@ -14,6 +14,11 @@ existing desktop session stays available. `Super+Return` opens Kitty, and
 `Super+Shift+E` ends the LCARS session. The on-screen power button is still a
 placeholder; use the key binding to log out.
 
+The LCARS session uses `assets/lcars-wallpaper.png` as its single default
+wallpaper. The installer copies it into `/usr/local/share/lcars/assets/`; run
+the installer again after updating the checkout, then log out and back into
+LCARS to apply wallpaper changes.
+
 The session launches through `start-hyprland` with its own Lua config, as
 required by current Hyprland. Hyprland may warn that `hyprland-guiutils` is
 missing when its optional dialogs are unavailable; LCARS does not use those
@@ -161,6 +166,7 @@ service; stop another notification daemon before installing it as the shell.
 ```
 shell.qml              windowed layout preview
 desktop.qml            layer-shell desktop with a transparent app area
+assets/                LCARS session wallpaper
 ShellContent.qml       shared LCARS layout and geometry
 scripts/app_layout.py  fits live Hyprland windows into the app area
 demo/                  one runnable file per component - see demo/README.md
