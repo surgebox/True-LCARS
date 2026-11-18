@@ -10,9 +10,11 @@ user from a complete checkout. The installer uses `sudo` for DNF and system
 files. It installs the runtime packages, downloads the OFL-licensed Antonio
 font, copies the desktop into `/usr/local/share/lcars`, and adds **LCARS** to the
 login screen's Wayland session list. Log out, choose LCARS, and sign in. The
-existing desktop session stays available. `Super+Return` opens Kitty, and
-`Super+Shift+E` ends the LCARS session. The power button in the top-right cap
-opens **Power Off**, **Restart**, **Sleep**, and **Log Out**.
+existing desktop session stays available. `Super+Return` opens Kitty,
+`Super+W` closes the focused app window, and `Super+Shift+E` ends the LCARS
+session. On a touchscreen, focus the app you want to close, then tap
+**Close Window** at the right end of the command band. The power button in the
+top-right cap opens **Power Off**, **Restart**, **Sleep**, and **Log Out**.
 
 The LCARS session uses `assets/lcars-wallpaper.png` as its single default
 wallpaper. The installer copies it into `/usr/local/share/lcars/assets/`; run
@@ -147,6 +149,12 @@ restores the previous top-zone preference.
 Focusing the directory path, file filter, or network password opens the keyboard with that field named
 in the elbow. The file area contracts and the network console moves and scales
 into the space above the keyboard as it moves.
+
+In the Fedora LCARS session the keyboard also opens when an app reports focus
+on an editable field through the desktop accessibility bus (AT-SPI). The
+bottom **Keyboard** control opens it manually for terminals and for apps
+that do not expose editable focus. Keys go to the focused app via `wtype`
+for Wayland windows or `xdotool` for XWayland windows.
 
 Run its interaction checks with
 `QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input dev/tst-keyboard.qml`.

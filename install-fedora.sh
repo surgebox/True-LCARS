@@ -31,7 +31,7 @@ command -v sudo >/dev/null || die 'sudo is required.'
 packages=(quickshell qt6-qtdeclarative qt6-qtmultimedia NetworkManager
     pipewire-utils pulseaudio-utils poppler-utils ffmpeg-free python3 xdg-utils
     kitty fontconfig curl jetbrains-mono-fonts dbus-tools xdg-desktop-portal-gtk
-    mate-polkit iw iputils)
+    mate-polkit iw iputils wtype xdotool python3-gobject at-spi2-core)
 if [[ $VERSION_ID == 45 ]]; then
     packages+=(fontawesome-7-free-fonts)
 else
@@ -142,5 +142,5 @@ EOF
 sudo fc-cache -f "$font_dir"
 
 note 'Installed. Log out, choose LCARS at the login screen, and sign in.'
-note 'Super+Return opens a terminal; Super+Shift+E logs out.'
+note 'Super+Return opens a terminal, Super+W closes the focused window, and Super+Shift+E logs out.'
 note 'To remove the session later, run ./uninstall-fedora.sh from this checkout.'

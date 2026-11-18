@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 
 // Full-screen desktop chrome. APP is a transparent input hole over normal
@@ -27,7 +28,8 @@ ShellRoot {
         color: "transparent"
         aboveWindows: true
         WlrLayershell.keyboardFocus: content.powerMenuOpen ? WlrKeyboardFocus.Exclusive
-            : content.internalPage ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            : content.internalPage || content.networkMenuOpen
+                ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         exclusiveZone: 0
         surfaceFormat.opaque: false
         mask: Region {
@@ -36,8 +38,8 @@ ShellRoot {
             Region {
                 x: content.appAreaX
                 y: content.appAreaY
-                width: content.internalPage || content.powerMenuOpen ? 0 : content.appAreaWidth
-                height: content.internalPage || content.powerMenuOpen ? 0 : content.appAreaHeight
+                width: content.captureAppArea ? 0 : content.appAreaWidth
+                height: content.captureAppArea ? 0 : content.appAreaHeight
                 intersection: Intersection.Subtract
             }
         }
@@ -46,6 +48,8 @@ ShellRoot {
             id: content
             desktopMode: true
             monitorName: panel.screen ? panel.screen.name : ""
+            hyprMonitor: panel.screen ? Hyprland.monitorFor(panel.screen) : null
+            activeWindow: ToplevelManager.activeToplevel
         }
     }
 }

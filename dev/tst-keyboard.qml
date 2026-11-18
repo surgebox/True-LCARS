@@ -16,16 +16,19 @@ TestCase {
     LcarsKeyboard { id: keyboard; target: input }
     SignalSpy { id: entered; target: keyboard; signalName: "enterPressed" }
     SignalSpy { id: activated; target: keyboard; signalName: "keyActivated" }
+    SignalSpy { id: external; target: keyboard; signalName: "externalKey" }
 
     function init() {
         input.text = ""
         input.cursorPosition = 0
         password.text = ""
         keyboard.target = input
+        keyboard.externalTarget = false
         keyboard.shifted = false
         keyboard.symbols = false
         entered.clear()
         activated.clear()
+        external.clear()
     }
 
     function test_typingAndModes() {
@@ -64,6 +67,25 @@ TestCase {
     function test_actionSignals() {
         keyboard.pressKey("enter")
         compare(entered.count, 1)
+    }
+
+    function test_externalTypingAndInternalPriority() {
+        keyboard.externalTarget = true
+        keyboard.pressKey("A")
+        compare(input.text, "a")
+        compare(external.count, 0)
+
+        keyboard.target = null
+        keyboard.pressKey("shift")
+        keyboard.pressKey("Q")
+        keyboard.pressKey("space")
+        keyboard.pressKey("left")
+        keyboard.pressKey("backspace")
+        keyboard.pressKey("enter")
+        compare(external.signalArguments.map(args => [args[0], args[1]]), [
+            ["Q", false], [" ", false], ["Left", true], ["BackSpace", true], ["Return", true]
+        ])
+        compare(entered.count, 0)
     }
 
     function test_touchAndPasswordField() {

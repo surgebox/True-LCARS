@@ -8,6 +8,8 @@ Item {
     property bool open: false
     property var target: null
     property string targetLabel: ""
+    property bool externalTarget: false
+    property bool openedForExternalField: false
     property color frameColor: LcarsUi.mauve
     property real contentLeft: 0
     property real contentWidth: width
@@ -30,16 +32,27 @@ Item {
     readonly property real coveredTop: sheet.y
 
     signal enterPressed()
+    signal externalKey(string key, bool special)
 
     function show(field, label) {
+        openedForExternalField = false
         target = field || null
         targetLabel = label || ""
         offset = 0
         open = true
     }
     function close() {
+        openedForExternalField = false
         open = false
         offset = 0
+    }
+    function externalFocus(editable) {
+        if (editable && !open && !target && !dragging) {
+            show(null, "")
+            openedForExternalField = true
+        } else if (!editable && openedForExternalField) {
+            close()
+        }
     }
     function toggle() {
         if (open) close()
@@ -109,8 +122,10 @@ Item {
             height: Math.max(implicitHeight, root.height - root.bottomMargin - sheet.y)
             target: root.target
             targetLabel: root.targetLabel
+            externalTarget: root.externalTarget
             frameColor: root.frameColor
             onEnterPressed: root.enterPressed()
+            onExternalKey: (key, special) => root.externalKey(key, special)
         }
     }
 }

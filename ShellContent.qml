@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
 import "theme"
@@ -35,12 +36,34 @@ Item {
     id: win
     property bool desktopMode: false
     property string monitorName: ""
+    property var hyprMonitor: null
+    property var activeWindow: null
+    readonly property int activeWorkspaceNumber: desktopMode
+        ? (hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 0)
+        : 3
     readonly property real appAreaX: appArea.x
     readonly property real appAreaY: appArea.y
     readonly property real appAreaWidth: appArea.width
     readonly property real appAreaHeight: appArea.height
     readonly property bool internalPage: activeFn === "system" || activeFn === "network"
     readonly property bool powerMenuOpen: powerMenu.visible
+    readonly property bool networkMenuOpen: networkMenu.open
+    readonly property bool captureAppArea: internalPage || powerMenuOpen || networkMenuOpen
+    readonly property bool appInputAvailable: desktopMode && !!activeWindow
+        && !captureAppArea && !notificationMenu.open
+    onAppInputAvailableChanged: {
+        if (!appInputAvailable) keyboardDock.externalFocus(false)
+    }
+
+    Process {
+        id: appKeyboard
+        command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/keyboard.py").toString().replace(/^file:\/\//, ""))]
+        running: win.desktopMode
+        stdinEnabled: true
+        stdout: SplitParser {
+            onRead: line => keyboardDock.externalFocus(line === "editable" && win.appInputAvailable)
+        }
+    }
 
     readonly property real dh: 1152 // design canvas height
 
@@ -352,11 +375,12 @@ Item {
     readonly property real railSpan: bottomBandTop - g - railTop
 
     readonly property real appX: railW + g
-    readonly property real appY: bandTop + elbowArm + g
+    readonly property real appY: LcarsUi.u(bandTop + g) + commandBandHeight
+    readonly property real commandBandHeight: desktopMode
+        ? Math.max(44, LcarsUi.u(elbowArm)) : LcarsUi.u(elbowArm)
     // the bottom elbow's column only occupies x 0..railW, so the app field is
     // free to run past the elbow's box and down to its bar
     readonly property real appBottom: bandBottomEdge - bottomThick - g
-    readonly property real appH: appBottom - appY
 
     // design-space width of the window, and the right-hand edge of every bar
     readonly property real dw: width / LcarsUi.scale
@@ -686,9 +710,9 @@ Item {
     Item {
         id: appArea
         x: LcarsUi.u(win.appX)
-        y: LcarsUi.u(win.appY)
+        y: win.appY
         width: win.width - x - LcarsUi.u(win.m)
-        height: Math.max(0, Math.min(LcarsUi.u(win.appH),
+        height: Math.max(0, Math.min(LcarsUi.u(win.appBottom) - y,
             keyboardDock.coveredTop - y - LcarsUi.u(win.keyboardGap)))
 
         // Dim outline + corner brackets, only so the reserved field is obvious
@@ -1233,6 +1257,117 @@ Item {
             height: LcarsUi.u(win.elbowArm)
             color: win.themed(win.armColors[win.armColors.length - 1])
         }
+
+        // Workspace controls sit centered over the top band's thin strip. The
+        // panel remains above application windows on every workspace, so an
+        // internal LCARS page can stay open while the app workspace changes.
+        Item {
+            id: workspaceRail
+            objectName: "workspaceRail"
+            readonly property real lineStart: win.bandSegStart
+            readonly property real lineEnd: win.bandSegStart + (win.armColors.length - 1) * (win.bandSegW + LcarsUi.u(win.bandGap)) - LcarsUi.u(win.bandGap)
+            x: lineStart
+            y: 0
+            width: Math.max(0, lineEnd - lineStart)
+            height: LcarsUi.u(48)
+
+            LcarsRect {
+                x: 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: LcarsUi.u(5)
+                radiusTL: height / 2
+                radiusTR: height / 2
+                radiusBL: height / 2
+                radiusBR: height / 2
+                color: LcarsUi.lilac
+            }
+
+            Rectangle {
+                id: workspaceCapsule
+                objectName: "workspaceCapsule"
+                width: Math.min(parent.width, LcarsUi.u(830))
+                height: LcarsUi.u(48)
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                radius: height / 2
+                color: LcarsUi.black
+                border.width: Math.max(2, LcarsUi.u(4))
+                border.color: LcarsUi.lilac
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: Math.max(3, LcarsUi.u(5))
+
+                    Repeater {
+                        model: 5
+
+                        delegate: Item {
+                            id: workspaceTab
+                            readonly property int workspaceNumber: index + 1
+                            readonly property bool selected: win.activeWorkspaceNumber === workspaceNumber
+                            width: workspaceCapsule.width / 5 - Math.max(3, LcarsUi.u(5)) * 2 / 5
+                            height: parent.height
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: height / 2
+                                color: LcarsUi.gold
+                                visible: workspaceTab.selected
+                            }
+
+                            LcarsLabel {
+                                anchors.fill: parent
+                                text: workspaceTab.workspaceNumber < 10
+                                    ? "0" + workspaceTab.workspaceNumber : String(workspaceTab.workspaceNumber)
+                                color: workspaceTab.selected ? LcarsUi.shade : LcarsUi.lilac
+                                size: 32
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                Accessible.role: Accessible.Button
+                                Accessible.name: "Workspace " + workspaceTab.workspaceNumber
+                                Accessible.onPressAction: workspaceTab.activate()
+                                onClicked: workspaceTab.activate()
+                            }
+
+                            function activate() {
+                                if (!win.desktopMode || workspaceTab.selected)
+                                    return
+                                if (win.monitorName)
+                                    Hyprland.dispatch("hl.dsp.focus({ monitor = '" + win.monitorName + "' })")
+                                Hyprland.dispatch("hl.dsp.focus({ workspace = "
+                                    + workspaceTab.workspaceNumber + ", on_current_monitor = true })")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        LcarsButton {
+            objectName: "closeWindowButton"
+            visible: win.appInputAvailable
+            anchors.right: parent.right
+            anchors.rightMargin: LcarsUi.u(win.m)
+            width: Math.max(156, LcarsUi.u(208))
+            height: win.commandBandHeight
+            text: "×  CLOSE WINDOW"
+            size: Math.max(23, 15 / Math.max(0.1, LcarsUi.scale))
+            padLeft: 5
+            padRight: 5
+            color: LcarsUi.salmon
+            radiusTR: height / 2
+            radiusBR: height / 2
+            Accessible.role: Accessible.Button
+            Accessible.name: win.activeWindow && win.activeWindow.title
+                ? "Close " + win.activeWindow.title : "Close window"
+            Accessible.onPressAction: if (win.appInputAvailable) win.activeWindow.close()
+            onClicked: if (win.appInputAvailable) win.activeWindow.close()
+        }
     }
 
     // =======================================================================
@@ -1413,6 +1548,11 @@ Item {
         contentWidth: appArea.width
         frameColor: win.lcarsColor
         minimumTop: LcarsUi.u(win.minimumKeyboardTop)
+        externalTarget: win.appInputAvailable
+        onExternalKey: (key, special) => {
+            if (appKeyboard.running)
+                appKeyboard.write(JSON.stringify({key: key, special: special}) + "\n")
+        }
         onEnterPressed: {
             if (win.fileBrowser && target === win.fileBrowser.locationField) {
                 win.fileBrowser.submitLocation()

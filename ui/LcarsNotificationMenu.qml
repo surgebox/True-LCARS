@@ -240,12 +240,10 @@ FocusScope {
         id: revealMask
         x: 0
         y: root.originY
-        width: LcarsUi.u(540)
+        width: root.width
         readonly property real fullHeight: Math.max(0, root.height - y)
         height: fullHeight * root.reveal
         clip: true
-        scale: Math.min(1, root.width / width)
-        transformOrigin: Item.TopLeft
 
         Item {
         id: panel
@@ -378,7 +376,10 @@ FocusScope {
                         id: message
                         required property var modelData
                         width: feed.width
-                        height: LcarsUi.u(91)
+                        height: Math.max(LcarsUi.u(91),
+                            summaryText.y + summaryText.implicitHeight
+                            + (bodyText.visible ? LcarsUi.u(6) + bodyText.implicitHeight : 0)
+                            + LcarsUi.u(16))
                         Rectangle {
                             width: LcarsUi.u(5); height: parent.height
                             color: message.modelData.urgency === 2 ? LcarsUi.salmon
@@ -399,24 +400,23 @@ FocusScope {
                             horizontalAlignment: Text.AlignRight
                         }
                         LcarsLabel {
+                            id: summaryText
                             x: LcarsUi.u(15); y: LcarsUi.u(24)
                             width: parent.width - x - LcarsUi.u(39)
-                            height: LcarsUi.u(29)
                             text: message.modelData.summary || "Notification"
                             color: LcarsUi.ice; size: 22; caps: false
-                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
                         }
                         Text {
-                            x: LcarsUi.u(15); y: LcarsUi.u(55)
-                            width: parent.width - x; height: LcarsUi.u(32)
+                            id: bodyText
+                            x: LcarsUi.u(15); y: summaryText.y + summaryText.implicitHeight + LcarsUi.u(6)
+                            width: parent.width - x
                             text: message.modelData.body
                             color: LcarsUi.lilac
                             font.family: LcarsUi.fontMono
                             font.pixelSize: Math.round(LcarsUi.u(15))
                             textFormat: Text.PlainText
                             wrapMode: Text.Wrap
-                            maximumLineCount: 2
-                            elide: Text.ElideRight
                             visible: text.length > 0
                         }
                         Rectangle {

@@ -8,6 +8,7 @@ Item {
 
     property var target: null
     property string targetLabel: ""
+    property bool externalTarget: false
     property color frameColor: LcarsUi.mauve
     property bool shifted: false
     property bool symbols: false
@@ -31,6 +32,7 @@ Item {
 
     signal enterPressed()
     signal keyActivated(string key)
+    signal externalKey(string key, bool special)
 
     implicitWidth: LcarsUi.u(1640)
     implicitHeight: LcarsUi.u(348)
@@ -55,6 +57,13 @@ Item {
         keyActivated(key)
         if (key === "shift") { shifted = !shifted; return }
         if (key === "mode") { symbols = !symbols; shifted = false; return }
+        if (!target && externalTarget) {
+            const names = {enter: "Return", backspace: "BackSpace", left: "Left", right: "Right"}
+            const special = Object.prototype.hasOwnProperty.call(names, key)
+            externalKey(special ? names[key] : keyText(key), special)
+            if (!special && shifted) shifted = false
+            return
+        }
         if (key === "enter") { enterPressed(); return }
         if (!target || typeof target.insert !== "function" || typeof target.remove !== "function")
             return
@@ -77,8 +86,12 @@ Item {
                 target.cursorPosition + (key === "left" ? -1 : 1)))
             return
         }
-        replaceSelection(key === "space" ? " " : (shifted && !symbols ? key : key.toLowerCase()))
+        replaceSelection(keyText(key))
         if (shifted) shifted = false
+    }
+
+    function keyText(key) {
+        return key === "space" ? " " : (shifted && !symbols ? key : key.toLowerCase())
     }
 
     Rectangle { anchors.fill: parent; color: LcarsUi.black }
@@ -98,7 +111,7 @@ Item {
         x: LcarsUi.u(76); y: 0
         width: LcarsUi.u(330); height: LcarsUi.u(42)
         text: root.target ? (root.targetLabel || root.target.objectName || "TEXT INPUT")
-            : "NO FIELD SELECTED"
+            : root.externalTarget ? "ACTIVE APPLICATION" : "NO FIELD SELECTED"
         color: LcarsUi.shade; size: 25; fit: true
     }
     LcarsStrip {
