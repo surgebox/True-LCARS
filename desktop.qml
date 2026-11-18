@@ -5,6 +5,8 @@ import Quickshell.Wayland
 // Full-screen desktop chrome. APP is a transparent input hole over normal
 // Hyprland windows; the controller keeps those windows inside the hole.
 ShellRoot {
+    IntroScreen { }
+
     // Keep the wallpaper beneath normal app windows and the LCARS chrome.
     PanelWindow {
         anchors { top: true; right: true; bottom: true; left: true }

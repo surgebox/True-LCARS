@@ -19,6 +19,12 @@ wallpaper. The installer copies it into `/usr/local/share/lcars/assets/`; run
 the installer again after updating the checkout, then log out and back into
 LCARS to apply wallpaper changes.
 
+At each LCARS login, the 15-second Earth intro plays once, fades to black, and
+then reveals the desktop. Click anywhere to skip it. The installer includes a
+VP9 copy in `assets/lcars-intro.webm` so it plays with Fedora's standard video
+packages. If playback fails, the intro closes automatically after a short
+timeout instead of leaving the desktop covered.
+
 The session launches through `start-hyprland` with its own Lua config, as
 required by current Hyprland. Hyprland may warn that `hyprland-guiutils` is
 missing when its optional dialogs are unavailable; LCARS does not use those
@@ -166,7 +172,8 @@ service; stop another notification daemon before installing it as the shell.
 ```
 shell.qml              windowed layout preview
 desktop.qml            layer-shell desktop with a transparent app area
-assets/                LCARS session wallpaper
+IntroScreen.qml        login video and fade transition
+assets/                LCARS session wallpaper and intro video
 ShellContent.qml       shared LCARS layout and geometry
 scripts/app_layout.py  fits live Hyprland windows into the app area
 demo/                  one runnable file per component - see demo/README.md

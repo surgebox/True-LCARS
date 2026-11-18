@@ -20,7 +20,7 @@ lint=/usr/lib/qt6/bin/qmllint
 
 cd "$here"
 fail=0
-for f in shell.qml desktop.qml ShellContent.qml tracking-test.qml ui/*.qml theme/*.qml feeds/*.qml demo/*.qml; do
+for f in shell.qml desktop.qml IntroScreen.qml ShellContent.qml tracking-test.qml ui/*.qml theme/*.qml feeds/*.qml demo/*.qml; do
     out=$("$lint" "$f" 2>&1 \
         | grep -E '^(Warning|Error|Critical):' \
         | grep -viE 'Unqualified access|Type LcarsUi not declared as singleton in qmldir but using pragma Singleton|Type PanelWindow is not creatable|Member "name" not found on type "QuickshellScreenInfo"' || true)
