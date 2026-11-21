@@ -38,8 +38,10 @@ ShellRoot {
             Region {
                 x: content.appAreaX
                 y: content.appAreaY
-                width: content.captureAppArea ? 0 : content.appAreaWidth
-                height: content.captureAppArea ? 0 : content.appAreaHeight
+                width: content.authenticationOpen || !(content.captureAppArea || content.arrangeMode)
+                    ? content.appAreaWidth : 0
+                height: content.authenticationOpen || !(content.captureAppArea || content.arrangeMode)
+                    ? content.appAreaHeight : 0
                 intersection: Intersection.Subtract
             }
         }

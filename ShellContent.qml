@@ -45,12 +45,96 @@ Item {
     readonly property real appAreaY: appArea.y
     readonly property real appAreaWidth: appArea.width
     readonly property real appAreaHeight: appArea.height
-    readonly property bool internalPage: activeFn === "system" || activeFn === "network"
+    readonly property bool internalPage: activeFn === "archive" || activeFn === "network" || activeFn === "launch"
     readonly property bool powerMenuOpen: powerMenu.visible
     readonly property bool networkMenuOpen: networkMenu.open
     readonly property bool captureAppArea: internalPage || powerMenuOpen || networkMenuOpen
+    property bool arrangeMode: false
+    property bool dragMode: false
+    property var nativeDrag: null
+    property bool authenticationOpen: false
+    property var arrangedWindows: []
+    property var pendingArrangedWindows: null
+    property string dragSource: ""
+    property string dropTarget: ""
+    property string dropZone: ""
+    property int dropWorkspace: 0
+    property string selectedArrangeWindow: ""
+    readonly property var selectedArrangeItem: arrangedWindows.find(
+        item => item.address === selectedArrangeWindow) || null
+    onArrangeModeChanged: {
+        if (!arrangeMode) {
+            selectedArrangeWindow = ""
+            dropWorkspace = 0
+        }
+    }
+    onArrangedWindowsChanged: {
+        if (selectedArrangeWindow && !arrangedWindows.some(
+                item => item.address === selectedArrangeWindow))
+            selectedArrangeWindow = ""
+    }
+    readonly property int arrangeBarHeight: Math.round(LcarsUi.u(34))
+    readonly property int arrangeFrameWidth: Math.round(LcarsUi.u(10))
+    readonly property int arrangeGap: Math.round(LcarsUi.u(16))
+    function arrangementPoint(x, y) {
+        for (let i = 0; i < arrangedWindows.length; i++) {
+            const item = arrangedWindows[i]
+            const r = item.rect
+            if (item.address === dragSource || x < r[0] || x > r[0] + r[2]
+                    || y < r[1] || y > r[1] + r[3]) continue
+            const dx = (x - r[0]) / r[2]
+            const dy = (y - r[1]) / r[3]
+            const edge = 0.23
+            const distances = [dx, 1 - dx, dy, 1 - dy]
+            const zones = ["left", "right", "top", "bottom"]
+            let smallest = 1
+            let zone = "center"
+            for (let j = 0; j < distances.length; j++) {
+                if (distances[j] < edge && distances[j] < smallest) {
+                    smallest = distances[j]
+                    zone = zones[j]
+                }
+            }
+            return {address: item.address, zone: zone, rect: r}
+        }
+        return null
+    }
+    function updateArrangeDrag(x, y) {
+        dropWorkspace = arrangementWorkspaceAt(x, y)
+        if (dropWorkspace) {
+            dropTarget = ""
+            dropZone = ""
+            return
+        }
+        const target = arrangementPoint(x, y)
+        dropTarget = target ? target.address : ""
+        dropZone = target ? target.zone : ""
+    }
+    function arrangementWorkspaceAt(x, y) {
+        const origin = workspaceCapsule.mapToItem(win, 0, 0)
+        if (x < origin.x || x >= origin.x + workspaceCapsule.width
+                || y < origin.y || y >= origin.y + workspaceCapsule.height)
+            return 0
+        return Math.min(5, Math.floor(5 * (x - origin.x) / workspaceCapsule.width) + 1)
+    }
+    function endArrangeDrag() {
+        if (dragSource && dropWorkspace && windowLayout.running)
+            windowLayout.write(JSON.stringify({action: "move_workspace", source: dragSource,
+                workspace: dropWorkspace}) + "\n")
+        else if (dragSource && dropTarget && windowLayout.running)
+            windowLayout.write(JSON.stringify({action: "drop", source: dragSource,
+                target: dropTarget, zone: dropZone}) + "\n")
+        dragSource = ""
+        dropTarget = ""
+        dropZone = ""
+        dropWorkspace = 0
+        if (pendingArrangedWindows !== null) {
+            arrangedWindows = pendingArrangedWindows
+            pendingArrangedWindows = null
+        }
+    }
     readonly property bool appInputAvailable: desktopMode && !!activeWindow
-        && !captureAppArea && !notificationMenu.open
+        && !captureAppArea && !notificationMenu.open && !authenticationOpen
     onAppInputAvailableChanged: {
         if (!appInputAvailable) keyboardDock.externalFocus(false)
     }
@@ -81,6 +165,21 @@ Item {
         command: ["python3", "-u", decodeURIComponent(Qt.resolvedUrl("scripts/app_layout.py").toString().replace(/^file:\/\//, ""))]
         stdinEnabled: true
         running: win.desktopMode
+        stdout: SplitParser {
+            onRead: line => {
+                try {
+                    const response = JSON.parse(line)
+                    win.authenticationOpen = !!response.authenticationOpen
+                    win.nativeDrag = response.nativeDrag || null
+                    const windows = response.windows
+                    if (!Array.isArray(windows)) return
+                    if (win.dragSource) win.pendingArrangedWindows = windows
+                    else win.arrangedWindows = windows
+                } catch (error) {
+                    console.warn("LCARS arrange response:", error)
+                }
+            }
+        }
     }
     Timer {
         id: geometryUpdate
@@ -89,11 +188,20 @@ Item {
         running: win.desktopMode
         onTriggered: {
             if (!windowLayout.running) return
+            const pills = workspaceCapsule.mapToItem(win, 0, 0)
             windowLayout.write(JSON.stringify({
                 x: win.appAreaX, y: win.appAreaY,
                 width: win.appAreaWidth, height: win.appAreaHeight,
                 blocked: win.internalPage,
+                arrange: win.arrangeMode,
+                dragMode: win.dragMode && !win.captureAppArea
+                    && !notificationMenu.open && !win.authenticationOpen,
+                barHeight: win.arrangeBarHeight,
+                frameWidth: win.arrangeFrameWidth,
+                arrangeGap: win.arrangeGap,
                 monitor: win.monitorName,
+                workspacePills: {x: pills.x, y: pills.y,
+                    width: workspaceCapsule.width, height: workspaceCapsule.height},
                 screen: win.width + "x" + win.height
             }) + "\n")
         }
@@ -258,11 +366,11 @@ Item {
     // function's name in the COMMAND block. With nothing picked both elbows sit
     // on their own default colours, so the resting state is exactly what it was.
     //
-    // Clicking the active block again clears it. System opens the file browser.
+    // Clicking the active block again clears it. Archives opens the file browser.
     // =======================================================================
     property string activeFn: ""
     onActiveFnChanged: {
-        if (activeFn !== "system") {
+        if (activeFn !== "archive") {
             if (win.fileBrowser) {
                 if (keyboardDock.target === win.fileBrowser.locationField)
                     keyboardDock.clearTarget(win.fileBrowser.locationField)
@@ -274,6 +382,8 @@ Item {
         }
         if (activeFn !== "network" && keyboardDock.target === networkScreen.passwordField)
             keyboardDock.clearTarget(networkScreen.passwordField)
+        if (activeFn !== "launch" && keyboardDock.target === launchScreen.searchField)
+            keyboardDock.clearTarget(launchScreen.searchField)
     }
     property color activeAccent: LcarsUi.brick
     readonly property LcarsFileBrowser fileBrowser: fileLoader.item as LcarsFileBrowser
@@ -292,7 +402,11 @@ Item {
             else networkScreen.metricFocus = networkScreen.metricFocus === fn ? "" : fn
             return
         }
-        if (win.activeFn !== "system") { win.selectFn(fn, acc); return }
+        if (win.activeFn === "launch" && fn === "main") {
+            win.resetMode()
+            return
+        }
+        if (win.activeFn !== "archive") { win.selectFn(fn, acc); return }
         const browser = win.fileBrowser
         if (!browser || !browser.ready) return
         switch (fn) {
@@ -393,6 +507,8 @@ Item {
             else if (keyboardDock.open) keyboardDock.close()
             else if (networkMenu.open) networkMenu.close()
             else if (notificationMenu.open) notificationMenu.close()
+            else if (win.dragMode) win.dragMode = false
+            else if (win.arrangeMode) win.arrangeMode = false
             else if (!win.desktopMode) Qt.quit()
         }
     }
@@ -642,8 +758,8 @@ Item {
     // column blocks, and keep their own alignment.)
     readonly property var defaultRailBlocks: [
         { w: 1.0, color: LcarsUi.rust,   text: "SYSTEM",  size: 34, align: "right", pad: 22,
-          fn: "system",  fnName: "FILE ACCESS" },
-        { w: 1.0, color: LcarsUi.violet, text: "ARCHIVE", size: 34, align: "right", pad: 22,
+          fn: "system",  fnName: "SYSTEM" },
+        { w: 1.0, color: LcarsUi.violet, text: "ARCHIVES", size: 34, align: "right", pad: 22,
           fn: "archive", fnName: "FILE ARCHIVE" },
         { w: 1.0, color: LcarsUi.gold,   text: "NETWORK", size: 34, align: "right", pad: 22,
           fn: "network", fnName: "NETWORK" },
@@ -679,7 +795,7 @@ Item {
         {fn: "main", color: LcarsUi.violet, text: "MAIN", size: 34, pad: 22}
     ].map(block => Object.assign({w: 1, size: 24, align: "right", pad: 18}, block))
 
-    readonly property var railBlocks: win.activeFn === "system" ? fileRailBlocks
+    readonly property var railBlocks: win.activeFn === "archive" ? fileRailBlocks
         : win.activeFn === "network" ? networkRailBlocks : defaultRailBlocks
 
     readonly property var railLayout: {
@@ -756,7 +872,7 @@ Item {
         }
 
         Column {
-            visible: !win.desktopMode && win.activeFn !== "system" && win.activeFn !== "network"
+            visible: !win.desktopMode && !win.internalPage
             anchors.centerIn: parent
             spacing: LcarsUi.u(8)
 
@@ -780,14 +896,14 @@ Item {
             id: fileViewport
             anchors.fill: parent
             clip: true
-            enabled: win.activeFn === "system"
+            enabled: win.activeFn === "archive"
 
             Item {
                 id: fileStage
                 width: fileViewport.width
                 height: fileViewport.height
                 x: fileSlide * fileViewport.width
-                property real fileSlide: win.activeFn === "system"
+                property real fileSlide: win.activeFn === "archive"
                     && fileLoader.status === Loader.Ready ? 0 : 1
                 Behavior on fileSlide {
                     NumberAnimation { duration: 420; easing.type: Easing.InOutCubic }
@@ -798,12 +914,13 @@ Item {
                     anchors.fill: parent
                     anchors.margins: LcarsUi.u(12)
                     // Keep navigation in memory when another rail button is selected.
-                    active: win.activeFn === "system" || item !== null
-                    visible: win.activeFn === "system"
+                    active: win.activeFn === "archive" || item !== null
+                    visible: win.activeFn === "archive"
                         || fileStage.x < fileViewport.width - 0.5
                     sourceComponent: LcarsFileBrowser {
                         onInputFocused: (field, label) => keyboardDock.show(field, label)
                         onInputBlurred: field => keyboardDock.clearTarget(field)
+                        onOpenedExternally: win.resetMode()
                     }
                 }
             }
@@ -837,6 +954,340 @@ Item {
                     onDismissed: win.resetMode()
                     onInputFocused: (field, label) => keyboardDock.show(field, label)
                     onInputBlurred: field => keyboardDock.clearTarget(field)
+                }
+            }
+        }
+        Item {
+            id: launchViewport
+            anchors.fill: parent
+            clip: true
+            enabled: win.activeFn === "launch"
+
+            Item {
+                id: launchStage
+                width: launchViewport.width
+                height: launchViewport.height
+                x: launchSlide * launchViewport.width
+                property real launchSlide: win.activeFn === "launch" ? 0 : 1
+                Behavior on launchSlide {
+                    NumberAnimation { duration: 420; easing.type: Easing.InOutCubic }
+                }
+                LcarsLauncher {
+                    id: launchScreen
+                    anchors.fill: parent
+                    anchors.margins: LcarsUi.u(12)
+                    open: win.activeFn === "launch" || launchStage.x < launchViewport.width - 0.5
+                    onLaunched: win.resetMode()
+                    onInputFocused: (field, label) => keyboardDock.show(field, label)
+                    onInputBlurred: field => keyboardDock.clearTarget(field)
+                }
+            }
+        }
+    }
+
+    Item {
+        id: arrangeOverlay
+        anchors.fill: parent
+        z: 2000
+        visible: win.desktopMode && (win.arrangeMode || !!win.nativeDrag)
+            && !win.captureAppArea
+            && !win.authenticationOpen
+
+        Rectangle {
+            id: dropPreview
+            readonly property string activeTarget: win.nativeDrag
+                ? win.nativeDrag.target : win.dropTarget
+            readonly property string zone: win.nativeDrag
+                ? win.nativeDrag.zone : win.dropZone
+            readonly property var target: win.arrangedWindows.find(
+                item => item.address === activeTarget)
+            readonly property var box: target ? target.rect : [0, 0, 0, 0]
+            visible: !!target && zone !== ""
+            x: box[0] + (zone === "right" ? box[2] / 2 : 0)
+            y: box[1] + (zone === "bottom" ? box[3] / 2 : 0)
+            width: box[2] * (zone === "left" || zone === "right" ? 0.5 : 1)
+            height: box[3] * (zone === "top" || zone === "bottom" ? 0.5 : 1)
+            color: Qt.rgba(1, 0.8, 0, 0.25)
+            border.color: LcarsUi.gold
+            border.width: Math.max(3, LcarsUi.u(4))
+            radius: LcarsUi.u(12)
+            readonly property real iconSize: Math.min(LcarsUi.u(165), width * 0.42, height * 0.45)
+            Accessible.role: Accessible.StaticText
+            Accessible.name: zone === "center" ? "Swap windows"
+                : "Place window " + zone
+
+            Image {
+                anchors.centerIn: parent
+                width: dropPreview.iconSize
+                height: width
+                source: Qt.resolvedUrl("assets/arrange-arrow.png")
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+                visible: dropPreview.zone !== "center"
+                rotation: dropPreview.zone === "left" ? 180
+                    : dropPreview.zone === "top" ? -90
+                    : dropPreview.zone === "bottom" ? 90 : 0
+            }
+
+            Item {
+                anchors.centerIn: parent
+                width: dropPreview.iconSize * 2.05
+                height: dropPreview.iconSize * 1.25
+                visible: dropPreview.zone === "center"
+                Image {
+                    x: parent.width - width
+                    y: 0
+                    width: dropPreview.iconSize
+                    height: width
+                    source: Qt.resolvedUrl("assets/arrange-arrow.png")
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+                Image {
+                    x: 0
+                    y: parent.height - height
+                    width: dropPreview.iconSize
+                    height: width
+                    source: Qt.resolvedUrl("assets/arrange-arrow.png")
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                    rotation: 180
+                }
+            }
+        }
+
+        Repeater {
+            model: win.arrangedWindows
+            delegate: Item {
+                visible: win.arrangeMode
+                id: titleBar
+                required property var modelData
+                readonly property var box: modelData.rect
+                x: box[0]
+                y: box[1]
+                width: box[2]
+                height: box[3]
+                z: 1
+
+                // The vertical arms occupy the space reserved around the app.
+                // They join the top caps and the bottom strips into a frame.
+                LcarsRect {
+                    x: 0
+                    y: headerBar.height - 1
+                    width: win.arrangeFrameWidth
+                    height: Math.max(0, titleBar.height - y)
+                    color: win.selectedArrangeWindow === titleBar.modelData.address
+                        ? LcarsUi.gold : LcarsUi.lilac
+                    radiusBL: width / 2
+                }
+                LcarsRect {
+                    x: titleBar.width - width
+                    y: headerBar.height - 1
+                    width: win.arrangeFrameWidth
+                    height: Math.max(0, titleBar.height - y)
+                    color: LcarsUi.salmon
+                    radiusBR: width / 2
+                }
+                LcarsRect {
+                    x: 0
+                    y: titleBar.height - height
+                    width: (titleBar.width - LcarsUi.u(8)) / 2
+                    height: win.arrangeFrameWidth
+                    color: LcarsUi.lilac
+                    radiusBL: height / 2
+                }
+                LcarsRect {
+                    x: (titleBar.width + LcarsUi.u(8)) / 2
+                    y: titleBar.height - height
+                    width: (titleBar.width - LcarsUi.u(8)) / 2
+                    height: win.arrangeFrameWidth
+                    color: LcarsUi.salmon
+                    radiusBR: height / 2
+                }
+
+                Item {
+                    id: headerBar
+                    x: 0
+                    y: 0
+                    width: titleBar.width
+                    height: win.arrangeBarHeight
+
+                    LcarsRect {
+                        id: leftCap
+                        x: 0
+                        y: 0
+                        width: Math.min(LcarsUi.u(70), headerBar.width / 6)
+                        height: headerBar.height
+                        color: win.selectedArrangeWindow === titleBar.modelData.address
+                            ? LcarsUi.gold : LcarsUi.lilac
+                        radiusTL: height / 2
+                    }
+                    Rectangle {
+                        x: leftCap.width
+                        y: 0
+                        width: Math.max(0, statsSegment.x - x)
+                        height: parent.height
+                        color: LcarsUi.black
+                    }
+                    LcarsLabel {
+                        id: windowTitle
+                        x: leftCap.width + LcarsUi.u(8)
+                        width: Math.min(LcarsUi.u(270), headerBar.width * 0.32)
+                        height: parent.height
+                        text: titleBar.modelData.title
+                        color: LcarsUi.gold
+                        size: 25
+                        elide: Text.ElideRight
+                    }
+                    Rectangle {
+                        id: statsSegment
+                        x: windowTitle.x + windowTitle.width + LcarsUi.u(8)
+                        y: 0
+                        width: Math.max(0, closeButton.x - x - LcarsUi.u(4))
+                        height: parent.height
+                        color: LcarsUi.gold
+                        Text {
+                            anchors.fill: parent
+                            anchors.leftMargin: LcarsUi.u(8)
+                            anchors.rightMargin: LcarsUi.u(8)
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            text: titleBar.modelData.ram === null
+                                ? "RAM// --"
+                                : "RAM// " + titleBar.modelData.ram + " MB"
+                            color: LcarsUi.black
+                            font.family: LcarsUi.font
+                            font.pixelSize: LcarsUi.u(25)
+                            font.weight: Font.Normal
+                        }
+                    }
+                    LcarsRect {
+                        id: closeButton
+                        x: parent.width - width
+                        y: 0
+                        width: Math.min(LcarsUi.u(57), headerBar.width / 7)
+                        height: parent.height
+                        color: LcarsUi.salmon
+                        radiusTR: height / 2
+                        Text {
+                            anchors.centerIn: parent
+                            text: "×"
+                            color: LcarsUi.black
+                            font.pixelSize: LcarsUi.u(27)
+                            font.bold: true
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: windowLayout.write(JSON.stringify({action: "close",
+                                source: titleBar.modelData.address}) + "\n")
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Close " + titleBar.modelData.title
+                        }
+                    }
+                    MouseArea {
+                        id: dragArea
+                        property bool moved: false
+                        property real pressX: 0
+                        property real pressY: 0
+                        x: 0
+                        width: closeButton.x
+                        height: parent.height
+                        cursorShape: Qt.OpenHandCursor
+                        onPressed: mouse => {
+                            const point = mapToItem(win, mouse.x, mouse.y)
+                            pressX = point.x
+                            pressY = point.y
+                            moved = false
+                            win.dragSource = titleBar.modelData.address
+                            win.dropTarget = ""
+                            win.dropZone = ""
+                            win.dropWorkspace = 0
+                        }
+                        onPositionChanged: mouse => {
+                            if (!pressed) return
+                            const point = mapToItem(win, mouse.x, mouse.y)
+                            if (Math.hypot(point.x - pressX, point.y - pressY) > LcarsUi.u(8))
+                                moved = true
+                            if (moved) win.updateArrangeDrag(point.x, point.y)
+                        }
+                        onReleased: mouse => {
+                            if (moved) {
+                                const point = mapToItem(win, mouse.x, mouse.y)
+                                win.updateArrangeDrag(point.x, point.y)
+                            } else {
+                                win.selectedArrangeWindow = win.selectedArrangeWindow === titleBar.modelData.address
+                                    ? "" : titleBar.modelData.address
+                            }
+                            win.endArrangeDrag()
+                        }
+                        onCanceled: win.endArrangeDrag()
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Arrange " + titleBar.modelData.title
+                            + "; tap for window controls, drag to reposition or move workspace"
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            id: windowControls
+            visible: !!win.selectedArrangeItem
+            z: 4
+            x: win.appAreaX + (win.appAreaWidth - width) / 2
+            y: win.appAreaY + win.appAreaHeight - height - LcarsUi.u(16)
+            width: Math.max(0, Math.min(win.appAreaWidth - LcarsUi.u(24), LcarsUi.u(590)))
+            height: LcarsUi.u(105)
+            radius: LcarsUi.u(16)
+            color: LcarsUi.black
+            border.color: LcarsUi.lilac
+            border.width: Math.max(2, LcarsUi.u(3))
+
+            MouseArea { anchors.fill: parent }
+            LcarsLabel {
+                x: LcarsUi.u(18); y: LcarsUi.u(7)
+                width: parent.width - LcarsUi.u(80); height: LcarsUi.u(32)
+                text: win.selectedArrangeItem
+                    ? "WINDOW // " + win.selectedArrangeItem.title : "WINDOW"
+                color: LcarsUi.gold; size: 24; elide: Text.ElideRight
+            }
+            LcarsFileAction {
+                x: parent.width - width - LcarsUi.u(9); y: LcarsUi.u(5)
+                width: LcarsUi.u(48); height: LcarsUi.u(34)
+                text: "×"
+                onClicked: win.selectedArrangeWindow = ""
+                Accessible.name: "Close window controls"
+            }
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: LcarsUi.u(46)
+                spacing: LcarsUi.u(7)
+                LcarsLabel {
+                    width: LcarsUi.u(107); height: LcarsUi.u(48)
+                    text: "MOVE TO"; color: LcarsUi.peach; size: 23
+                }
+                Repeater {
+                    model: 5
+                    delegate: LcarsFileAction {
+                        required property int index
+                        readonly property int destination: index + 1
+                        width: LcarsUi.u(62); height: LcarsUi.u(48)
+                        text: destination < 10 ? "0" + destination : String(destination)
+                        selected: win.activeWorkspaceNumber === destination
+                        enabled: win.activeWorkspaceNumber !== destination
+                        onClicked: {
+                            if (!win.selectedArrangeItem || !windowLayout.running) return
+                            windowLayout.write(JSON.stringify({action: "move_workspace",
+                                source: win.selectedArrangeItem.address,
+                                workspace: destination}) + "\n")
+                            win.selectedArrangeWindow = ""
+                        }
+                        Accessible.name: "Move selected window to workspace " + destination
+                    }
                 }
             }
         }
@@ -1211,13 +1662,13 @@ Item {
 
             LcarsLabel {
                 text: win.activeFn === "network" ? "NETWORK"
-                    : win.activeFn === "system" ? "SYSTEM" : "COMMAND"
+                    : win.activeFn === "archive" ? "ARCHIVES" : "COMMAND"
                 color: LcarsUi.shade
-                size: win.activeFn === "network" || win.activeFn === "system" ? 30 : 34
+                size: win.activeFn === "network" || win.activeFn === "archive" ? 30 : 34
             }
             LcarsLabel {
                 text: win.activeFn === "network" ? "// COMMUNICATION"
-                    : win.activeFn === "system" ? "// FILE ACCESS"
+                    : win.activeFn === "archive" ? "// FILE ACCESS"
                     : win.activeFn !== "" ? "MAIN MENU" : "67187585"
                 color: Qt.rgba(0.1, 0.06, 0.03, 0.75)
                 size: win.activeFn === "network" ? 16 : 18
@@ -1249,13 +1700,50 @@ Item {
             }
         }
 
-        LcarsStrip {
+        Item {
+            id: arrangeSegment
             x: win.bandSegStart + (win.armColors.length - 1)
                 * (win.bandSegW + LcarsUi.u(win.bandGap))
             y: 0
             width: win.bandSegW
             height: LcarsUi.u(win.elbowArm)
-            color: win.themed(win.armColors[win.armColors.length - 1])
+            LcarsStrip {
+                anchors.fill: parent
+                color: win.dragMode ? LcarsUi.green
+                    : win.arrangeMode ? LcarsUi.gold
+                    : win.themed(win.armColors[win.armColors.length - 1])
+            }
+            Text {
+                anchors.centerIn: parent
+                text: win.dragMode ? "\uf255" : "\uf256"
+                color: LcarsUi.black
+                font.family: "Font Awesome 7 Free Solid"
+                font.pixelSize: Math.round(LcarsUi.u(33))
+            }
+            MouseArea {
+                anchors.fill: parent
+                enabled: win.desktopMode
+                cursorShape: Qt.PointingHandCursor
+                property bool held: false
+                onPressed: held = false
+                onPressAndHold: {
+                    held = true
+                    win.dragMode = false
+                    win.arrangeMode = !win.arrangeMode
+                }
+                onClicked: {
+                    if (held) return
+                    win.arrangeMode = false
+                    win.dragMode = !win.dragMode
+                }
+                Accessible.role: Accessible.Button
+                Accessible.name: win.dragMode ? "Finish moving windows"
+                    : "Move windows; hold for window details"
+                Accessible.onPressAction: {
+                    win.arrangeMode = false
+                    win.dragMode = !win.dragMode
+                }
+            }
         }
 
         // Workspace controls sit centered over the top band's thin strip. The
@@ -1312,15 +1800,22 @@ Item {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: height / 2
-                                color: LcarsUi.gold
+                                color: win.dropWorkspace === workspaceTab.workspaceNumber
+                                    || (win.nativeDrag && win.nativeDrag.workspace === workspaceTab.workspaceNumber)
+                                    ? LcarsUi.peach : LcarsUi.gold
                                 visible: workspaceTab.selected
+                                    || win.dropWorkspace === workspaceTab.workspaceNumber
+                                    || (win.nativeDrag && win.nativeDrag.workspace === workspaceTab.workspaceNumber)
                             }
 
                             LcarsLabel {
                                 anchors.fill: parent
                                 text: workspaceTab.workspaceNumber < 10
                                     ? "0" + workspaceTab.workspaceNumber : String(workspaceTab.workspaceNumber)
-                                color: workspaceTab.selected ? LcarsUi.shade : LcarsUi.lilac
+                                color: workspaceTab.selected
+                                    || win.dropWorkspace === workspaceTab.workspaceNumber
+                                    || (win.nativeDrag && win.nativeDrag.workspace === workspaceTab.workspaceNumber)
+                                    ? LcarsUi.shade : LcarsUi.lilac
                                 size: 32
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -1348,26 +1843,6 @@ Item {
             }
         }
 
-        LcarsButton {
-            objectName: "closeWindowButton"
-            visible: win.appInputAvailable
-            anchors.right: parent.right
-            anchors.rightMargin: LcarsUi.u(win.m)
-            width: Math.max(156, LcarsUi.u(208))
-            height: win.commandBandHeight
-            text: "×  CLOSE WINDOW"
-            size: Math.max(23, 15 / Math.max(0.1, LcarsUi.scale))
-            padLeft: 5
-            padRight: 5
-            color: LcarsUi.salmon
-            radiusTR: height / 2
-            radiusBR: height / 2
-            Accessible.role: Accessible.Button
-            Accessible.name: win.activeWindow && win.activeWindow.title
-                ? "Close " + win.activeWindow.title : "Close window"
-            Accessible.onPressAction: if (win.appInputAvailable) win.activeWindow.close()
-            onClicked: if (win.appInputAvailable) win.activeWindow.close()
-        }
     }
 
     // =======================================================================
@@ -1528,6 +2003,7 @@ Item {
     LcarsNotificationMenu {
         id: notificationMenu
         anchors.fill: parent
+        z: 2100
         originY: helloBar.y + helloBar.height
         backendEnabled: win.desktopMode
         bannerAllowed: !powerMenu.visible && !networkMenu.open
@@ -1565,6 +2041,11 @@ Item {
                 close()
             } else if (win.fileBrowser && target === win.fileBrowser.filterField) {
                 win.fileBrowser.focusColumn(0)
+                close()
+            } else if (target === launchScreen.searchField) {
+                close()
+            } else if (target === launchScreen.terminalField) {
+                launchScreen.submitTerminalInput()
                 close()
             }
         }

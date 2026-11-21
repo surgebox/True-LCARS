@@ -15,39 +15,26 @@ Rectangle {
     signal chosen(var entry)
     signal openFile(var entry)
     signal moveFocus(int direction)
-    color: "#0d0b12"
-    radius: LcarsUi.u(18)
-    border.color: list.activeFocus ? root.headerColor : "#4a394b"
-    border.width: list.activeFocus ? 2 : 1
+    color: LcarsUi.black
 
     function focusList() { list.forceActiveFocus() }
     onFilterChanged: list.contentY = 0
 
-    Rectangle {
-        id: heading
-        x: LcarsUi.u(3); y: LcarsUi.u(3)
-        width: parent.width - LcarsUi.u(6)
-        height: LcarsUi.u(58)
-        radius: height / 2
-        color: root.headerColor
-        LcarsLabel {
-            x: LcarsUi.u(22); width: parent.width - LcarsUi.u(44)
-            height: parent.height
-            text: (root.columnIndex + 1).toString().padStart(2, "0")
-                + "  /  " + (root.directory.name || "HOME")
-            size: 27; fit: true
-            color: LcarsUi.black
-            elide: Text.ElideMiddle
-        }
+    LcarsFileFrame {
+        id: frame
+        anchors.fill: parent
+        title: (root.columnIndex + 1).toString().padStart(2, "0")
+            + "  /  " + (root.directory.name || "HOME")
+        accent: root.headerColor
     }
     ListView {
         id: list
         objectName: "fileEntryList"
         anchors {
-            top: heading.bottom; topMargin: LcarsUi.u(14)
+            top: parent.top; topMargin: frame.headerHeight + LcarsUi.u(14)
             bottom: foot.top; bottomMargin: LcarsUi.u(8)
-            left: parent.left; leftMargin: LcarsUi.u(8)
-            right: parent.right; rightMargin: LcarsUi.u(8)
+            left: parent.left; leftMargin: LcarsUi.u(14)
+            right: parent.right; rightMargin: LcarsUi.u(14)
         }
         clip: true
         model: root.entries

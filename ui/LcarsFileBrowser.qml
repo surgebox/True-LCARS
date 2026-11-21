@@ -117,7 +117,11 @@ Rectangle {
     }
     function openFile(entry) {
         // Build a file URL without treating filename characters as URI syntax.
-        Qt.openUrlExternally("file://" + entry.path.split("/").map(encodeURIComponent).join("/"))
+        openFileUrl("file://" + entry.path.split("/").map(encodeURIComponent).join("/"))
+    }
+    function openFileUrl(url) {
+        Qt.openUrlExternally(url)
+        openedExternally()
     }
     function refresh() {
         const copy = columns.map(c => Object.assign({}, c, {loading: true, error: "", request: send("list", c.path)}))
@@ -161,6 +165,7 @@ Rectangle {
 
     signal inputFocused(var field, string label)
     signal inputBlurred(var field)
+    signal openedExternally()
     readonly property var filterField: nameFilter
     readonly property var locationField: directoryPath
     Shortcut { sequence: "Ctrl+L"; enabled: root.visible; onActivated: root.focusLocation() }
@@ -176,6 +181,7 @@ Rectangle {
         id: toolbar
         anchors { top: parent.top; left: parent.left; right: parent.right }
         readonly property bool compact: width < LcarsUi.u(1100)
+        readonly property real searchStart: width - Math.max(LcarsUi.u(355), Math.min(width * 0.25, LcarsUi.u(520)))
         height: compact ? LcarsUi.u(122) : LcarsUi.u(66)
         color: "#131016"
         border.color: "#513627"
@@ -183,24 +189,63 @@ Rectangle {
 
         Rectangle { width: LcarsUi.u(10); height: parent.height; color: LcarsUi.rust }
         LcarsLabel {
-            x: LcarsUi.u(24); y: 0; width: LcarsUi.u(150); height: LcarsUi.u(66)
-            text: "FILTER /"; color: LcarsUi.peach; size: 25
+            id: pathLabel
+            x: LcarsUi.u(24); y: 0; width: LcarsUi.u(112); height: LcarsUi.u(66)
+            text: "PATH /"; color: LcarsUi.honey; size: 28
+        }
+        TextField {
+            id: directoryPath
+            objectName: "directoryPath"
+            x: pathLabel.x + pathLabel.width
+            y: LcarsUi.u(7)
+            width: Math.max(0, (toolbar.compact ? toolbar.width - LcarsUi.u(12)
+                : toolbar.searchStart - LcarsUi.u(16)) - x)
+            height: LcarsUi.u(52)
+            enabled: root.ready
+            text: root.currentPath
+            placeholderText: "DIRECTORY PATH"
+            color: LcarsUi.honey
+            placeholderTextColor: LcarsUi.mauve
+            selectionColor: LcarsUi.violet
+            selectedTextColor: LcarsUi.black
+            font.family: LcarsUi.font
+            font.pixelSize: LcarsUi.u(29)
+            font.weight: Font.Bold
+            leftPadding: LcarsUi.u(15)
+            selectByMouse: true
+            onAccepted: root.submitLocation()
+            onActiveFocusChanged: {
+                if (activeFocus) root.inputFocused(directoryPath, "DIRECTORY PATH")
+                else root.inputBlurred(directoryPath)
+            }
+            background: Rectangle {
+                color: "#1b1620"
+                border.color: directoryPath.activeFocus ? LcarsUi.gold : LcarsUi.peach
+                border.width: 2
+                radius: LcarsUi.u(8)
+            }
+        }
+        LcarsLabel {
+            id: searchLabel
+            x: toolbar.compact ? LcarsUi.u(24) : toolbar.searchStart
+            y: toolbar.compact ? LcarsUi.u(56) : 0
+            width: LcarsUi.u(104); height: LcarsUi.u(66)
+            text: "SEARCH /"; color: LcarsUi.peach; size: 22
         }
         TextField {
             id: nameFilter
-            x: LcarsUi.u(178)
-            y: LcarsUi.u(7)
-            width: toolbar.compact ? Math.max(LcarsUi.u(120), toolbar.width - x - LcarsUi.u(80))
-                : Math.min(LcarsUi.u(620), toolbar.width * 0.38)
+            x: searchLabel.x + searchLabel.width
+            y: toolbar.compact ? LcarsUi.u(63) : LcarsUi.u(7)
+            width: Math.max(0, toolbar.width - x - LcarsUi.u(78))
             height: LcarsUi.u(52)
-            placeholderText: "FILTER FILES / FOLDERS"
+            placeholderText: "SEARCH FILES / FOLDERS"
             color: LcarsUi.ice
             placeholderTextColor: LcarsUi.mauve
             font.family: LcarsUi.font
-            font.pixelSize: LcarsUi.u(24)
+            font.pixelSize: LcarsUi.u(21)
             leftPadding: LcarsUi.u(15)
             onActiveFocusChanged: {
-                if (activeFocus) root.inputFocused(nameFilter, "FILE FILTER")
+                if (activeFocus) root.inputFocused(nameFilter, "FILE SEARCH")
                 else root.inputBlurred(nameFilter)
             }
             background: Rectangle {
@@ -213,49 +258,12 @@ Rectangle {
         LcarsFileAction {
             id: clearFilter
             x: nameFilter.x + nameFilter.width + LcarsUi.u(8)
-            y: LcarsUi.u(7)
+            y: nameFilter.y
             width: LcarsUi.u(58); height: LcarsUi.u(52)
             text: "×"; visible: nameFilter.text.length > 0
             onClicked: nameFilter.clear()
             Accessible.role: Accessible.Button
-            Accessible.name: "Clear file filter"
-        }
-        LcarsLabel {
-            id: pathLabel
-            x: toolbar.compact ? LcarsUi.u(24) : clearFilter.x + clearFilter.width + LcarsUi.u(16)
-            y: toolbar.compact ? LcarsUi.u(56) : 0
-            width: LcarsUi.u(100); height: LcarsUi.u(66)
-            text: "PATH /"; color: LcarsUi.peach; size: 25
-        }
-        TextField {
-            id: directoryPath
-            objectName: "directoryPath"
-            x: toolbar.compact ? LcarsUi.u(178) : pathLabel.x + pathLabel.width
-            y: toolbar.compact ? LcarsUi.u(63) : LcarsUi.u(7)
-            width: Math.max(0, toolbar.width - x - LcarsUi.u(12))
-            height: LcarsUi.u(52)
-            enabled: root.ready
-            text: root.currentPath
-            placeholderText: "DIRECTORY PATH"
-            color: LcarsUi.ice
-            placeholderTextColor: LcarsUi.mauve
-            selectionColor: LcarsUi.violet
-            selectedTextColor: LcarsUi.black
-            font.family: LcarsUi.font
-            font.pixelSize: LcarsUi.u(23)
-            leftPadding: LcarsUi.u(15)
-            selectByMouse: true
-            onAccepted: root.submitLocation()
-            onActiveFocusChanged: {
-                if (activeFocus) root.inputFocused(directoryPath, "DIRECTORY PATH")
-                else root.inputBlurred(directoryPath)
-            }
-            background: Rectangle {
-                color: "#1b1620"
-                border.color: directoryPath.activeFocus ? LcarsUi.violet : "#5d465c"
-                border.width: directoryPath.activeFocus ? 2 : 1
-                radius: LcarsUi.u(8)
-            }
+            Accessible.name: "Clear file search"
         }
     }
     Flickable {
@@ -298,7 +306,7 @@ Rectangle {
         loading: root.previewLoading
         browserVisible: root.visible
         onPageRequested: page => root.inspect(root.selectedPath, page)
-        onOpenRequested: Qt.openUrlExternally(root.preview.url)
+        onOpenRequested: root.openFileUrl(root.preview.url)
     }
     Rectangle {
         id: footer

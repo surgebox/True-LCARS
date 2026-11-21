@@ -2,6 +2,11 @@
 -- Uses Hyprland 0.55+ Lua configuration as packaged by the Fedora COPR.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 hl.config({ misc = { disable_hyprland_logo = true, disable_splash_rendering = true } })
+hl.config({ general = {
+    resize_on_border = true,
+    extend_border_grab_area = 16,
+    hover_icon_on_border = true,
+} })
 hl.env("XDG_CURRENT_DESKTOP", "LCARS:Hyprland")
 hl.env("GTK_A11Y", "atspi")
 hl.env("QT_LINUX_ACCESSIBILITY_ALWAYS_ON", "1")

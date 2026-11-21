@@ -11,9 +11,7 @@ Rectangle {
     signal pageRequested(int page)
     signal openRequested()
     readonly property bool media: file.kind === "audio" || file.kind === "video"
-    color: "#0d0b12"
-    radius: LcarsUi.u(18)
-    border.color: "#4a394b"
+    color: LcarsUi.black
     onFileChanged: player.stop()
     onBrowserVisibleChanged: { if (!browserVisible) player.stop() }
 
@@ -27,25 +25,17 @@ Rectangle {
     }
     function time(ms) { return Math.floor(ms / 60000) + ":" + Math.floor(ms / 1000 % 60).toString().padStart(2, "0") }
 
-    Rectangle {
-        id: heading
-        x: LcarsUi.u(3)
-        y: LcarsUi.u(3)
-        width: parent.width - LcarsUi.u(6)
-        height: LcarsUi.u(58)
-        radius: height / 2
-        color: LcarsUi.violet
-        LcarsLabel {
-            x: LcarsUi.u(22); width: parent.width - LcarsUi.u(44)
-            height: parent.height
-            text: "ANALYSIS / PREVIEW"; size: 27; color: LcarsUi.black
-        }
+    LcarsFileFrame {
+        id: frame
+        anchors.fill: parent
+        title: "ANALYSIS / PREVIEW"
+        accent: LcarsUi.violet
     }
     Column {
         id: details
         visible: !!root.file.name || root.loading
         anchors {
-            top: heading.bottom; topMargin: LcarsUi.u(18)
+            top: parent.top; topMargin: frame.headerHeight + LcarsUi.u(18)
             left: parent.left; leftMargin: LcarsUi.u(20)
             right: parent.right; rightMargin: LcarsUi.u(20)
         }
@@ -72,8 +62,8 @@ Rectangle {
     Item {
         id: content
         anchors {
-            top: details.visible ? details.bottom : heading.bottom
-            topMargin: LcarsUi.u(18)
+            top: details.visible ? details.bottom : parent.top
+            topMargin: details.visible ? LcarsUi.u(18) : frame.headerHeight + LcarsUi.u(18)
             bottom: controls.top; bottomMargin: LcarsUi.u(16)
             left: parent.left; leftMargin: LcarsUi.u(20)
             right: parent.right; rightMargin: LcarsUi.u(20)

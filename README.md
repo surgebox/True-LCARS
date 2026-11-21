@@ -5,6 +5,28 @@ development; the Fedora login session starts the current managed desktop mode.
 
 ## Fedora 44/45 login session
 
+The current desktop build is on `henry/lcars-dev-alternative`; GitHub's default
+`henry/base-app` branch is an older base. For a new Fedora Workstation install:
+
+```bash
+git clone --branch henry/lcars-dev-alternative https://github.com/surgebox/True-LCARS.git
+cd True-LCARS
+./install-fedora.sh
+```
+
+For an existing checkout already on `henry/lcars-dev-alternative`:
+
+```bash
+cd ~/True-LCARS
+git pull --ff-only origin henry/lcars-dev-alternative
+./install-fedora.sh
+```
+
+After either install, log out, choose **LCARS** at the login screen, and sign
+in. Reinstalling copies the updated desktop and Hyprland settings; a new LCARS
+login loads them. Remote desktop access through Tailscale and WayVNC is a
+separate setup.
+
 On Fedora Workstation (RPM edition), run `./install-fedora.sh` as your regular
 user from a complete checkout. The installer uses `sudo` for DNF and system
 files. It installs the runtime packages, downloads the OFL-licensed Antonio
@@ -12,8 +34,26 @@ font, copies the desktop into `/usr/local/share/lcars`, and adds **LCARS** to th
 login screen's Wayland session list. Log out, choose LCARS, and sign in. The
 existing desktop session stays available. `Super+Return` opens Kitty,
 `Super+W` closes the focused app window, and `Super+Shift+E` ends the LCARS
-session. On a touchscreen, focus the app you want to close, then tap
-**Close Window** at the right end of the command band. The power button in the
+session. Tap the window control icon at the right end of the command band to
+enable native window dragging. Drag a window onto another window's center to
+swap them, toward an edge to change its placement, or onto a workspace pill to
+move it there without switching workspaces. The yellow overlay or highlighted
+workspace pill shows the drop result. Tap the icon again or press Escape when
+finished. Hold the
+icon to open **Arrange** with window details. While Arrange is on, each managed
+window gets an LCARS titlebar and a colored frame. The gaps between tiles widen
+to leave room for the frame. Drag a
+titlebar to the center of another window to swap them, or to an edge to split
+that window's space. The highlighted region shows the drop result. Drag the
+titlebar onto a workspace pill to move that window there without switching
+workspaces. Tap a titlebar to open controls for moving it to workspace 01–05.
+With both modes off, drag a shared window border to resize adjacent tiles.
+LCARS keeps the new split position after the drag ends.
+Tap the titlebar's **×** to close that window. The solid titlebar segment shows
+the window process's resident
+memory, sampled once per second only while Arrange is on. Apps with helper
+processes can use more in total. Tap the icon again or press Escape to finish
+arranging. The power button in the
 top-right cap opens **Power Off**, **Restart**, **Sleep**, and **Log Out**.
 
 The LCARS session uses `assets/lcars-wallpaper.png` as its single default
@@ -50,8 +90,9 @@ user's home directory is left untouched. Re-running the installer updates the
 copied desktop and preserves its initial package record.
 
 The installer is intended for a fresh Fedora Workstation installation with a
-graphical login screen and an active NetworkManager service. It has not yet
-been run on a Fedora 44 or 45 machine. It does not install a display manager or
+graphical login screen and an active NetworkManager service. It has been used
+on Fedora 45; Fedora 44 still needs installation testing. It does not install a
+display manager or
 turn a Fedora Server installation into a graphical workstation. The current
 desktop mode supports one LCARS panel and needs testing with multiple monitors.
 
@@ -79,29 +120,31 @@ watched happen.
 `dev/check.sh` is the fast loop - this Qt fails the *entire* config on things
 qmllint can see, so it is worth running before a capture.
 
-## System file browser (alternative version)
+## Archives file browser (alternative version)
 
-Click **SYSTEM** to open the embedded file viewer. Selecting a directory adds
+Click **ARCHIVES** to open the embedded file viewer. Selecting a directory adds
 another column, preserving the visible parent chain; deep paths scroll
 horizontally. The columns and preview resize as the chain grows, and the whole
 view slides in from the right. File rows, the filter, and preview actions use
 large touch targets. Selecting a file shows its preview at the right. Navigation stays
 in memory when switching rail buttons. LCARS chrome surrounds readable filenames
-and document text. The column/preview arrangement is inspired by
+and document text, with an elbow frame around each directory column and the preview.
+The column/preview arrangement is inspired by
 [Strata](https://github.com/lgse/strata); this implementation is independent.
 
 The header title displays the current mode in both condensed and expanded
 states; condensed CPU/MEM/NET/DSK pills sit against the right margin. Selecting
-System replaces the side rail with large Back, Forward, Up, Home, Root, Refresh,
+Archives replaces the side rail with large Back, Forward, Up, Home, Root, Refresh,
 Hidden, and Main controls. Unavailable actions dim, Hidden shows its toggle state,
 and Main returns to the default rail.
 Press COMMAND or LCARS to return to the default mode menu. The browser's path
-field lives in the System toolbar; Ctrl+L focuses it.
+field is the dominant control in the Archives toolbar; Ctrl+L focuses it.
 There is no separate file-viewer title bar or navigation toolbar.
 
-The name filter matches names in the displayed columns. The viewer reads files;
+Search matches names in the displayed columns. The viewer reads files;
 opening in the default application is an
-explicit button, double-click, or Enter on a file. It has no file-editing actions.
+explicit button, double-click, or Enter on a file. Opening a file returns to MAIN
+so the application window is visible. The browser has no file-editing actions.
 
 | Key | Action |
 | --- | --- |
@@ -484,15 +527,26 @@ is the longer form printed in the COMMAND block once that function is active:
 
 | block | `fn` | `fnName` |
 |---|---|---|
-| SYSTEM | `system` | SYSTEM STATS |
-| ARCHIVE | `archive` | FILE ARCHIVE |
+| SYSTEM | `system` | SYSTEM |
+| ARCHIVES | `archive` | FILE ARCHIVE |
 | NETWORK | `network` | NETWORK |
 | LAUNCH | `launch` | APP LAUNCHER |
 | COMMS | `comms` | COMMS |
 | MAIN | `home` | MAIN DISPLAY |
 
-**Next session:** the `fn` ids are the hooks. `selectFn(fn, acc)` is where a
-view would be summoned, and the app field is the surface it would open into.
+**LAUNCH** opens on **My Apps**, showing pinned apps first and then apps opened
+through LAUNCH in most recently used order. **All Apps** shows every installed
+desktop app alphabetically. Both views show app icons in two columns and offer
+star buttons to pin or unpin apps. Launch history and pins are saved in
+`~/.local/state/lcars/launcher.json`. **Uninstall** has its own searchable list
+of installed apps. Select one, then tap **Uninstall** to review the exact Flatpak
+or RPM package and confirm removal. The package transaction runs in the console
+beside the list. **Install** searches Flathub, Fedora Flatpaks, and Fedora RPM
+packages. Tap a result to review its source, then tap **Install**. The console
+beside the search results shows progress and accepts confirmations and password
+prompts. Package operations can continue while LAUNCH is closed; reopening it
+restores the console output. Fedora package search uses cached DNF metadata so
+opening LAUNCH never triggers a repository update.
 
 ## Collapse / expand
 
@@ -818,8 +872,15 @@ node feeds/orbit/track.mjs             # stream until killed
 **Refine desktop window handling.** `desktop.qml` uses a transparent app field
 in one top-layer `PanelWindow`; `scripts/app_layout.py` tiles the visible
 workspace's windows in the field. The controller currently makes managed
-windows floating while active and restores their prior layout on exit. Test
-applications with minimum window sizes and multi-monitor setups before relying
+windows floating while active and restores their prior layout on exit. New
+windows split the most recently added window's area, alternating left/right
+and top/bottom. Two windows share the field; a third divides the right half;
+every added window uses occupied space rather than leaving an empty grid cell.
+Arrange mode keeps a split tree per workspace, so center swaps, edge drops,
+and dragged size adjustments persist when switching between workspaces. Windows can
+be sent to another workspace through the Arrange controls or by dropping on
+its workspace pill.
+Test applications with minimum window sizes and multi-monitor setups before relying
 on this as a daily driver.
 
 **Then components.** `ShellContent.qml` is deliberately one file so geometry stays easy
